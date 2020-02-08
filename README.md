@@ -1,3 +1,5 @@
+# sqlNotex
+
 sqlNotex is a multi-platform software useful to manage a large amount of textual notes in Markdown format on a single computer or in a local network using the open source database Firebird (firebirdsql.org).
 The notes are divided into notebooks and, within them, in sections, and it is possible to associate to each note a list of activities to be done, a series of attachments (files of any kind), tags and links to other notes. The search function may find the wished notes starting from the title, the text content, the modification date, the tags, the name of the attachments or activities.
 
