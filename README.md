@@ -12,4 +12,4 @@ The official website of the software is https://sites.google.com/view/sqlnotex/.
 
 See the [Wiki](https://github.com/maxnd/sqlNotex/wiki) for the user mamual of the software.
 
-
+Before contributing to the development of this software, see [the Contributing file](https://github.com/maxnd/sqlNotex/blob/master/CONTRIBUTING.md).
