@@ -10,5 +10,6 @@ sqlNotex is free software, as it is released under the GPL version 3 license or 
 
 The official website of the software is https://sites.google.com/view/sqlnotex/.
 
+See the [Wiki](https://github.com/maxnd/sqlNotex/wiki) for the user mamual of the software.
 
 
