@@ -86,7 +86,7 @@ msgstr "Un software libero per gestire note e documenti"
 
 #: tfmcopyright.lbcopyrightname.caption
 msgctxt "tfmcopyright.lbcopyrightname.caption"
-msgid "sqlNotex 1.0.4"
+msgid "sqlNotex 1.0.5"
 msgstr ""
 
 #: tfmcopyright.lbcopyrightsite.caption
@@ -495,7 +495,6 @@ msgid "New"
 msgstr "Nuova"
 
 #: tfmmain.minotessearch.caption
-#| msgid "Search"
 msgctxt "tfmmain.minotessearch.caption"
 msgid "Search in note"
 msgstr "Ricerca nella nota"

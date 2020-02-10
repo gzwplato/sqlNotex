@@ -86,7 +86,7 @@ msgstr ""
 
 #: tfmcopyright.lbcopyrightname.caption
 msgctxt "tfmcopyright.lbcopyrightname.caption"
-msgid "sqlNotex 1.0.4"
+msgid "sqlNotex 1.0.5"
 msgstr ""
 
 #: tfmcopyright.lbcopyrightsite.caption

@@ -500,6 +500,7 @@ type
     procedure FindNotes;
     function GenID(GenName: string): integer;
     procedure Disconnect;
+    function GetDbSize(stDatabase: String): String;
     function IsHeader(stLine: String): boolean;
     procedure SelectInsertFootnote;
     procedure RenumberFootnotes;
@@ -770,11 +771,8 @@ var
   MyIni: TIniFile;
 begin
   SaveAll;
-  iLastNotebook := zqNotebooksID.Value;
-  iLastSection := zqSectionsID.Value;
-  iLastNote := zqNotesID.Value;
   dbText.Clear;
-  zcConnection.Disconnect;
+  Disconnect;
   try
     MyIni := TIniFile.Create(myHomeDir + myConfigFile);
     if fmMain.WindowState = wsMaximized then
@@ -2715,14 +2713,14 @@ begin
 end;
 
 procedure TfmMain.miToolsBackupClick(Sender: TObject);
+   var stSize: String;
 begin
   if FileExistsUTF8(stBackupFile) = False then
   begin
     MessageDlg(msg049, mtWarning, [mbOK], 0);
     Exit;
   end;
-  if MessageDlg(msg005 + ' (' + FormatFloat('#,0.#',
-    FileSizeUtf8(zcConnection.Database) / 1000000) + ' MB)?',
+  if MessageDlg(msg005 + ' (' + GetDbSize(stBackupFile) + ')?',
     mtConfirmation, [mbOK, mbCancel], 0) = mrOk then
     try
       Screen.Cursor := crHourGlass;
@@ -2763,8 +2761,8 @@ begin
   else
   begin
     if MessageDlg(msg010 + ' ' + formatDateTime('dddddd "' +
-      msg011 + '" hh.nn', FileDateToDateTime(FileAge(stBackupFile))) +
-      ' (' + FormatFloat('#,0.#', FileSizeUtf8(stBackupFile) / 1000000) + ' MB)?',
+      msg011 + '" hh.nn', FileDateToDateTime(FileAgeUTF8(stBackupFile))) +
+      ' (' + GetDbSize(stBackupFile) + ')?',
       mtConfirmation, [mbOK, mbCancel], 0) = mrOk then
       try
         Screen.Cursor := crHourGlass;
@@ -3301,7 +3299,9 @@ begin
   pnMain.Visible := False;
   lbSize.Caption := '';
   if ((FileExistsUTF8(stBackupFile) = True) and
-    (FileAge(stBackupFile) > FileAge(zcConnection.Database))) then
+    (FileDateToDateTime(FileAgeUTF8(stBackupFile)) >
+    FileDateToDateTime(FileAgeUTF8(zcConnection.Database)) +
+    1 / 24 / 60 * 2)) then
   begin
     lbBackup.Visible := True;
   end
@@ -3411,8 +3411,7 @@ begin
   MainFormat;
   if FileExistsUTF8(zcConnection.Database) = True then
   begin
-    lbSize.Caption := sb004 + ': ' + FormatFloat('#,0.#',
-      FileSizeUtf8(zcConnection.Database) / 1000000) + ' MB.';
+    lbSize.Caption := sb004 + ': ' + GetDbSize(zcConnection.Database) + '.';
   end;
   // Do not add dbText.SetFocus here because it adds
   // an empty line in the text of the note.
@@ -3479,8 +3478,7 @@ begin
     end;
     if FileExistsUTF8(zcConnection.Database) = True then
     begin
-      lbSize.Caption := sb004 + ': ' + FormatFloat('#,0.#',
-        FileSizeUtf8(zcConnection.Database) / 1000000) + ' MB.';
+      lbSize.Caption := sb004 + ': ' + GetDbSize(zcConnection.Database) + '.';
     end;
   except
     MessageDlg(msg029, mtWarning, [mbOK], 0);
@@ -5318,6 +5316,20 @@ function TfmMain.ColorToHtml(clColor: TColor): string;
 begin
   Result := IntToHex(clColor, 6);
   Result := '#' + Copy(Result, 5, 2) + Copy(Result, 3, 2) + Copy(Result, 1, 2);
+end;
+
+function TfmMain.GetDbSize(stDatabase: String): String;
+begin
+  if FileSizeUtf8(stDatabase) < 1000000000 then
+  begin
+    Result := FormatFloat('#,0.#',
+      FileSizeUtf8(stDatabase) / 1000000) + ' MB'
+  end
+  else
+  begin
+    Result := FormatFloat('#,0.#',
+      FileSizeUtf8(stDatabase) / 1000000000) + ' GB'
+  end;
 end;
 
 function TfmMain.GenID(GenName: string): integer;
