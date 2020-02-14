@@ -1,13 +1,13 @@
 object fmInsertID: TfmInsertID
   Left = 640
-  Height = 159
+  Height = 160
   Top = 351
-  Width = 304
+  Width = 300
   ActiveControl = edID
   BorderStyle = bsDialog
   Caption = 'Insert ID'
-  ClientHeight = 159
-  ClientWidth = 304
+  ClientHeight = 160
+  ClientWidth = 300
   KeyPreview = True
   OnKeyDown = FormKeyDown
   OnShow = FormShow
@@ -43,7 +43,7 @@ object fmInsertID: TfmInsertID
     TabOrder = 0
   end
   object lbIDKind: TLabel
-    Left = 31
+    Left = 25
     Height = 19
     Top = 27
     Width = 143

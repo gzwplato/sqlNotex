@@ -1929,6 +1929,11 @@ object fmMain: TfmMain
         ShortCut = 16456
         OnClick = miEditCopyHTMLClick
       end
+      object miEditCopyWord: TMenuItem
+        Caption = 'Copy for Word'
+        ShortCut = 24663
+        OnClick = miEditCopyWordClick
+      end
       object N15: TMenuItem
         Caption = '-'
       end
@@ -2275,6 +2280,10 @@ object fmMain: TfmMain
       object miToolsRestore: TMenuItem
         Caption = 'Restore database'
         OnClick = miToolsRestoreClick
+      end
+      object miToolsCompact: TMenuItem
+        Caption = 'Compact database'
+        OnClick = miToolsCompactClick
       end
       object N22: TMenuItem
         Caption = '-'

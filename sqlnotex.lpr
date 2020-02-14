@@ -29,7 +29,7 @@ uses
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, zcomponent, Unit1, Unit2, Unit3, unitcopyright, Unit4,
-  Unit6, Unit7, Unit8, clocale, Unit9, Unit5;
+  Unit6, Unit7, Unit8, Unit9, Unit5, Unit10;
 
 {$R *.res}
 
@@ -47,6 +47,7 @@ begin
   Application.CreateForm(TfmShowAllTasks, fmShowAllTasks);
   Application.CreateForm(TfmSearch, fmSearch);
   Application.CreateForm(TfmBookmarks, fmBookmarks);
+  Application.CreateForm(TfmPassword, fmPassword);
   Application.Run;
 end.
 

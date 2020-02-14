@@ -86,7 +86,7 @@ msgstr ""
 
 #: tfmcopyright.lbcopyrightname.caption
 msgctxt "tfmcopyright.lbcopyrightname.caption"
-msgid "sqlNotex 1.0.5"
+msgid "sqlNotex 1.0.6"
 msgstr ""
 
 #: tfmcopyright.lbcopyrightsite.caption
@@ -262,6 +262,7 @@ msgid "sqlNotex"
 msgstr ""
 
 #: tfmmain.lbpassword.caption
+msgctxt "tfmmain.lbpassword.caption"
 msgid "Password"
 msgstr ""
 
@@ -293,6 +294,10 @@ msgstr ""
 #: tfmmain.mieditcopymarkdown.caption
 msgctxt "tfmmain.mieditcopymarkdown.caption"
 msgid "Copy as Markdown"
+msgstr ""
+
+#: tfmmain.mieditcopyword.caption
+msgid "Copy for Word"
 msgstr ""
 
 #: tfmmain.mieditopenwriter.caption
@@ -629,6 +634,10 @@ msgstr ""
 msgid "Backup database"
 msgstr ""
 
+#: tfmmain.mitoolscompact.caption
+msgid "Compact database"
+msgstr ""
+
 #: tfmmain.mitoolsoptions.caption
 msgctxt "tfmmain.mitoolsoptions.caption"
 msgid "Options"
@@ -936,6 +945,29 @@ msgstr ""
 
 #: tfmoptions.lnstfonts.caption
 msgid "Font name of the notes and of titles"
+msgstr ""
+
+#: tfmpassword.bncancel.caption
+msgctxt "tfmpassword.bncancel.caption"
+msgid "Cancel"
+msgstr ""
+
+#: tfmpassword.bnok.caption
+msgctxt "tfmpassword.bnok.caption"
+msgid "OK"
+msgstr ""
+
+#: tfmpassword.caption
+msgctxt "tfmpassword.caption"
+msgid "Password"
+msgstr ""
+
+#: tfmpassword.lbsudopwd.caption
+msgid "Insert the sudo password"
+msgstr ""
+
+#: tfmpassword.lbsyspwd.caption
+msgid "Insert the SYSDBA password"
 msgstr ""
 
 #: tfmrenametags.bncancel.caption
@@ -1303,6 +1335,14 @@ msgstr ""
 
 #: unit1.msg049
 msgid "No backup file has been specified in the options of the software."
+msgstr ""
+
+#: unit1.msg050
+msgid "The database has been compacted."
+msgstr ""
+
+#: unit1.msg051
+msgid "It was not possible to compact the database. Check that the passwords are correct"
 msgstr ""
 
 #: unit1.pdfmanual

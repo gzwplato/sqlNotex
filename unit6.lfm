@@ -5,6 +5,7 @@ object fmRenameTags: TfmRenameTags
   Width = 400
   ActiveControl = edOldTag
   BorderIcons = []
+  BorderStyle = bsDialog
   Caption = 'Rename tags'
   ClientHeight = 240
   ClientWidth = 400

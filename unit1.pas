@@ -29,7 +29,7 @@ uses
   Classes, SysUtils, DB, IBConnection, sqldb, Forms, Controls, Graphics,
   Dialogs, ExtCtrls, Menus, DBGrids, ComCtrls, DBCtrls, StdCtrls, Grids,
   ZConnection, ZDataset, ZSqlUpdate, RichMemo, LCLIntf, IniFiles, LazUTF8,
-  zipper, LazFileUtils, FileUtil, Clipbrd, DefaultTranslator;
+  zipper, LazFileUtils, FileUtil, Clipbrd, process, DefaultTranslator;
 
 type
 
@@ -84,6 +84,8 @@ type
     lbInfo: TLabel;
     lbTitle: TLabel;
     lbID: TLabel;
+    miToolsCompact: TMenuItem;
+    miEditCopyWord: TMenuItem;
     miEditBookmarks: TMenuItem;
     N31: TMenuItem;
     miFileExport: TMenuItem;
@@ -390,6 +392,7 @@ type
     procedure grTasksKeyDown(Sender: TObject; var Key: word; Shift: TShiftState);
     procedure miEditBookmarksClick(Sender: TObject);
     procedure miEditCopyMarkdownClick(Sender: TObject);
+    procedure miEditCopyWordClick(Sender: TObject);
     procedure miEditReformatClick(Sender: TObject);
     procedure miFileExportClick(Sender: TObject);
     procedure miFileImportClick(Sender: TObject);
@@ -421,6 +424,7 @@ type
     procedure miSectionsMoveDownClick(Sender: TObject);
     procedure miSectionsMoveUpClick(Sender: TObject);
     procedure miToolsBackupClick(Sender: TObject);
+    procedure miToolsCompactClick(Sender: TObject);
     procedure miToolsRestoreClick(Sender: TObject);
     procedure miToolsShowEditorClick(Sender: TObject);
     procedure miToolsOptionsClick(Sender: TObject);
@@ -496,7 +500,7 @@ type
     function CleanXML(stXMLText: string): string;
     function ColorToHtml(clColor: TColor): string;
     procedure Connect;
-    function CopyAsHTML(blWriter: boolean): string;
+    function CopyAsHTML(smOutput: SmallInt): string;
     procedure FindNotes;
     function GenID(GenName: string): integer;
     procedure Disconnect;
@@ -593,6 +597,8 @@ resourcestring
   msg047 = 'The selected file was note created with sqlNotex.';
   msg048 = 'It was not possible to find the note.';
   msg049 = 'No backup file has been specified in the options of the software.';
+  msg050 = 'The database has been compacted.';
+  msg051 = 'It was not possible to compact the database. Check that the passwords are correct';
   dateformat = 'en';
   prior1 = '1. Urgent';
   prior2 = '2. Very important';
@@ -627,7 +633,8 @@ resourcestring
 implementation
 
 
-uses Unit2, Unit3, Unit4, Unit5, Unit6, Unit7, Unit8, Unit9, unitcopyright;
+uses Unit2, Unit3, Unit4, Unit5, Unit6, Unit7, Unit8, Unit9, Unit10,
+  unitcopyright;
 
 {$R *.lfm}
 
@@ -841,6 +848,7 @@ begin
     zqAttachmentsATTACHMENT.LoadFromFile(myFile);
     zqAttachmentsTITLE.Value := ExtractFileName(myFile);
     zqAttachments.Post;
+    lbSize.Caption := sb004 + ': ' + GetDbSize(zcConnection.Database) + '.';
   end;
 end;
 
@@ -1290,7 +1298,8 @@ begin
     (UTF8Pos(stLastChar, '1234567890*/_~#|`()[]!^.>+- ' +
       #13 + #9 + LineEnding) > 0) or
     (key = 8) or (key = 46) or
-    (UTF8Pos(stNextChar, '*/~') > 0)) then
+    (UTF8Pos(stNextChar, '*/~') > 0) or
+    (dbText.SelStart = UTF8Length(dbText.Text))) then
   begin
     FormatMarkers(False);
   end;
@@ -1457,6 +1466,18 @@ end;
 
 procedure TfmMain.dbTitleKeyDown(Sender: TObject; var Key: word; Shift: TShiftState);
 begin
+  if ((key = 13) and (Shift = [ssCtrl])) then
+  begin
+    key := 0;
+    dbText.InDelText('# ' + dbTitle.Text + LineEnding, 0, 0);
+    dbText.SelStart := UTF8Length(dbText.Lines[0]);
+    dbTextKeyDown(nil, key, []);
+    if dbText.Visible = True then
+    begin
+      dbText.SetFocus;
+    end;
+  end
+  else
   if key = 13 then
   begin
     key := 0;
@@ -1782,13 +1803,27 @@ var
   Stream: TStream;
 begin
   SaveAll;
-  Stream := TStringStream.Create(CopyAsHTML(False));
+  Stream := TStringStream.Create(CopyAsHTML(0));
   try
     Stream.Position := 0;
     Clipboard.AddFormat(CF_HTML, Stream);
   finally
     Stream.Free;
   end;
+end;
+
+procedure TfmMain.miEditCopyWordClick(Sender: TObject);
+  var
+    Stream: TStream;
+  begin
+    SaveAll;
+    Stream := TStringStream.Create(CopyAsHTML(2));
+    try
+      Stream.Position := 0;
+      Clipboard.AddFormat(CF_HTML, Stream);
+    finally
+      Stream.Free;
+    end;
 end;
 
 procedure TfmMain.miEditPreviewClick(Sender: TObject);
@@ -1799,7 +1834,7 @@ begin
   if dbText.Text <> '' then
     try
       myMemo := TMemo.Create(self);
-      myMemo.Text := CopyAsHTML(False);
+      myMemo.Text := CopyAsHTML(0);
       myMemo.Lines.SaveToFile(GetTempDir + 'sqlnotex.html');
       OpenDocument(GetTempDir + 'sqlnotex.html');
     finally
@@ -1815,7 +1850,7 @@ begin
   if dbText.Text <> '' then
     try
       myMemo := TMemo.Create(self);
-      myMemo.Text := CopyAsHTML(True);
+      myMemo.Text := CopyAsHTML(1);
       myMemo.Lines.SaveToFile(GetTempDir + 'sqlnotex.odt');
       OpenDocument(GetTempDir + 'sqlnotex.odt');
     finally
@@ -2246,6 +2281,7 @@ begin
         zqAttachments.Post;
       end;
     end;
+    lbSize.Caption := sb004 + ': ' + GetDbSize(zcConnection.Database) + '.';
   end
   else
   begin
@@ -2739,6 +2775,7 @@ begin
         else
         begin
           Screen.Cursor := crDefault;
+          lbBackup.Visible := False;
           MessageDlg(msg007, mtInformation, [mbOK], 0);
           edPassword.SetFocus;
         end;
@@ -2779,6 +2816,7 @@ begin
           else
           begin
             Screen.Cursor := crDefault;
+            lbBackup.Visible := False;
             MessageDlg(msg013, mtInformation, [mbOK], 0);
             edPassword.SetFocus;
           end;
@@ -2789,6 +2827,80 @@ begin
       finally
         Screen.Cursor := crDefault;
       end;
+  end;
+end;
+
+procedure TfmMain.miToolsCompactClick(Sender: TObject);
+  var Proc: TProcess;
+    myFileDate: TDateTime;
+begin
+  if fmPassword.ShowModal = mrOK then
+  begin
+    if ((fmPassword.edSudoPwd.Text <> '') and
+      (fmPassword.edSysPwd.Text <> ''))then
+    begin
+      if FileExistsUTF8(zcConnection.Database + '.backup.fdb') = True then
+      begin
+        DeleteFileUTF8(zcConnection.Database + '.backup.fdb');
+      end;
+      CopyFile(zcConnection.Database, zcConnection.Database + '.bak',
+        [cffOverwriteFile], False);
+      myFileDate := FileDateToDateTime(FileAgeUTF8(zcConnection.Database));
+      Proc := TProcess.Create(nil);
+      try
+        Screen.Cursor := crHourGlass;
+        Application.ProcessMessages;
+        Proc.Executable := '/bin/sh';
+        Proc.Options := Proc.Options + [poWaitOnExit, poUsePipes];
+        Proc.Parameters.Add('-c');
+        Proc.Parameters.Add('echo ' + fmPassword.edSudoPwd.Text  + ' | ' +
+          'sudo -S -k /usr/bin/gbak -USER sysdba -PAS ' + fmPassword.edSysPwd.Text +
+          ' ' + zcConnection.Database + ' ' + zcConnection.Database + '.backup.fdb');
+        Proc.Execute;
+        if FileExistsUTF8(zcConnection.Database + '.backup.fdb') = False then
+        begin
+          fmPassword.edSudoPwd.Text := '';
+          fmPassword.edSysPwd.Text := '';
+          MessageDlg(msg051, mtWarning, [mbOK], 0);
+        end
+        else
+        begin
+          Proc.Parameters.Clear;
+          Proc.Parameters.Add('-c');
+          Proc.Parameters.Add('echo ' + fmPassword.edSudoPwd.Text  + ' | ' +
+            'sudo -S -k /usr/bin/gbak -USER sysdba -PAS ' + fmPassword.edSysPwd.Text +
+            ' -rep ' + zcConnection.Database + '.backup.fdb ' + zcConnection.Database);
+          Proc.Execute;
+          Proc.Parameters.Clear;
+          Proc.Parameters.Add('-c');
+          Proc.Parameters.Add('echo ' + fmPassword.edSudoPwd.Text  + ' | ' +
+            'sudo -S -k chown -R firebird:firebird ' +
+            ExtractFileDir(zcConnection.Database));
+          Proc.Execute;
+          fmPassword.edSudoPwd.Text := '';
+          fmPassword.edSysPwd.Text := '';
+          if myFileDate < FileDateToDateTime(
+            FileAgeUTF8(zcConnection.Database)) then
+          begin
+            Screen.Cursor := crDefault;
+            MessageDlg(msg050, mtWarning, [mbOK], 0);
+          end
+          else
+          begin
+            Screen.Cursor := crDefault;
+            MessageDlg(msg051, mtWarning, [mbOK], 0);
+          end;
+        end;
+      finally
+        Proc.Free;
+        Screen.Cursor := crDefault;
+      end;
+    end
+    else
+    begin
+      fmPassword.edSudoPwd.Text := '';
+      fmPassword.edSysPwd.Text := '';
+    end;
   end;
 end;
 
@@ -2879,7 +2991,7 @@ procedure TfmMain.zqNotebooksAfterScroll(DataSet: TDataSet);
 begin
   if zqNotes.Active = True then
   begin
-    if blLoadNotes = true then
+    if blLoadNotes = True then
     begin
       zqNotesAfterScroll(nil);
     end;
@@ -3235,6 +3347,7 @@ begin
   miEditReformat.Enabled := False;
   miEditCopyMarkdown.Enabled := False;
   miEditCopyHTML.Enabled := False;
+  miEditCopyWord.Enabled := False;
   miEditPreview.Enabled := False;
   miEditOpenWriter.Enabled := False;
   miEditBookmarks.Enabled := False;
@@ -3294,9 +3407,11 @@ begin
   miToolsShowEditor.Enabled := False;
   miToolsBackup.Enabled := True;
   miToolsRestore.Enabled := True;
+  miToolsCompact.Enabled := True;
   fmMain.KeyPreview := False;
   shSave.Brush.Color := clForm;
   pnMain.Visible := False;
+  lbInfo.Caption := '';
   lbSize.Caption := '';
   if ((FileExistsUTF8(stBackupFile) = True) and
     (FileDateToDateTime(FileAgeUTF8(stBackupFile)) >
@@ -3331,8 +3446,8 @@ begin
   zqTags.Open;
   zqLinks.Open;
   zqTasks.Open;
-  miFileSave.Enabled := True;
-  miFileUndo.Enabled := True;
+  miFileSave.Enabled := False;
+  miFileUndo.Enabled := False;
   miFileRefresh.Enabled := True;
   miFileExport.Enabled := True;
   miFileImport.Enabled := True;
@@ -3340,6 +3455,7 @@ begin
   miEditReformat.Enabled := True;
   miEditCopyMarkdown.Enabled := True;
   miEditCopyHTML.Enabled := True;
+  miEditCopyWord.Enabled := True;
   miEditPreview.Enabled := True;
   miEditOpenWriter.Enabled := True;
   miEditBookmarks.Enabled := True;
@@ -3399,6 +3515,7 @@ begin
   miToolsShowEditor.Enabled := True;
   miToolsBackup.Enabled := False;
   miToolsRestore.Enabled := False;
+  miToolsCompact.Enabled := False;
   blLoadNotes := False;
   zqNotebooks.Locate('ID', iLastNotebook, []);
   zqSections.Locate('ID', iLastSection, []);
@@ -3740,7 +3857,7 @@ begin
   end;
 end;
 
-function TfmMain.CopyAsHTML(blWriter: boolean): string;
+function TfmMain.CopyAsHTML(smOutput:SmallInt): string;
 var
   myText, myFootnotes: TStringList;
   blNumList, blBulList, blQuote, blCode, blLink, blTable: boolean;
@@ -3759,6 +3876,7 @@ begin
   blTable := False;
   Screen.Cursor := crHourGlass;
   Application.ProcessMessages;
+  // smOutput - 0: browser, 1: Writer, 2: Word
   try
     for i := 0 to dbText.Lines.Count - 1 do
     begin
@@ -3819,9 +3937,16 @@ begin
       // Quote
       if UTF8Copy(stLine, 1, 2) = '> ' then
       begin
+        if smOutput = 2 then
+        begin;
+          myText.Add('<p class=MsoQuote>');
+        end;
         if blQuote = False then
         begin
-          myText.Add('<blockquote>');
+          if smOutput < 2 then
+          begin
+            myText.Add('<blockquote>');
+          end;
           blQuote := True;
         end;
       end
@@ -3829,7 +3954,10 @@ begin
       begin
         if blQuote = True then
         begin
-          myText.Add('</blockquote>');
+          if smOutput < 2 then
+          begin
+            myText.Add('</blockquote>');
+          end;
           blQuote := False;
         end;
       end;
@@ -3931,7 +4059,7 @@ begin
       end
       // Last tags of the text of the footnotes
       else if ((UTF8Copy(stLine, 1, 2) = '[^') and
-        (UTF8Pos(']: ', stLine) > 0) and (blWriter = True)) then
+        (UTF8Pos(']: ', stLine) > 0) and (smOutput > 0)) then
       begin
         stLine := stLine + '</div>';
         myText.Add(stLine);
@@ -4138,7 +4266,7 @@ begin
         UTF8Pos('[^', myText.Text, 1)) + 1, 1) = ':') and
         (myFootnotes.IndexOf(stFootnote) > -1)) then
       begin
-        if blWriter = False then
+        if smOutput = 0 then
         begin
           myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']: ',
             // Code for HTML standard
@@ -4147,6 +4275,7 @@ begin
             '</a></sup> ', []);
         end
         else
+        if smOutput = 1 then
         begin
           myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']: ',
             // Code for Writer
@@ -4154,11 +4283,23 @@ begin
             '<a class="sdfootnotesym" name="sdfootnote' + stFootnote +
             'sym" ' + 'href="#sdfootnote' + stFootnote + 'anc">' +
             stFootnote + '</a>', []); // the </div> tag are already set
+        end
+        else
+        if smOutput = 2 then
+        begin
+          myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']: ',
+            // Code for Word
+            '<div style=''mso-element:footnote'' id=ftn' + stFootnote + '> ' +
+            '<p class=MsoFootnoteText><a style=''mso-footnote-id:ftn' +
+            stFootnote + ''' href="#_ftnref' + stFootnote + '" name="_ftn' +
+            stFootnote + '" title=""><span class=MsoFootnoteReference> ' +
+            '<span style=''mso-special-character: footnote''></span></span></a> ',
+            []) + '</p>'; // the </div> tag are already set
         end;
       end
       else
       begin
-        if blWriter = False then
+        if smOutput = 0 then
         begin
           myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']',
             // Code for HTML standard
@@ -4166,12 +4307,23 @@ begin
             '">' + stFootnote + '</a></sup>', []);
         end
         else
+        if smOutput = 1 then
         begin
           myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']',
             // Code for Writer
             '<a class="sdfootnoteanc" name="sdfootnote' + stFootnote +
             'anc" href="#sdfootnote' + stFootnote + 'sym"><sup>' +
             stFootnote + '</sup></a>', []);
+        end
+        else
+        if smOutput = 2 then
+        begin
+          myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']',
+            // Code for Word
+            '<a style=''mso-footnote-id:ftn' + stFootnote + ''' href="#_ftn' +
+            stFootnote + '" name="_ftnref' + stFootnote + '" ' +
+            'title=""><span class=MsoFootnoteReference><span ' +
+            'style=''mso-special-character:footnote''></span></span></a>', []);
         end;
       end;
       myFootnotes.Add(stFootnote);
@@ -4304,24 +4456,38 @@ begin
         zqTasks.EnableControls;
       end;
     // Finalize
-    myText.Insert(0, '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"> ' +
-      '<html><head><meta http-equiv="content-type" content="text/html; ' +
-      'charset=UTF-8"><style type="text/css"> @page { margin-left: 2cm; ' +
-      'margin-right: 2cm; margin-top: 2cm; margin-bottom: 2cm;}</style></head>' +
-      '<style>h1 {text-align: center; font-size: 16pt; font-weight: bold; ' +
-      'margin-top: 0cm; margin-bottom: 2cm;} ' +
-      'h2 {font-size: 14pt; font-weight: bold;} ' +
-      'h3 {font-size: 14pt; font-weight: normal;font-style: italic;} ' +
-      'h4 {font-size: 12pt;font-weight: normal} ' +
-      'h5 {font-size: 12pt;font-weight: normal} ' +
-      'h6 {font-size: 12pt;font-weight: normal} ' +
-      'blockquote {font-size: 10pt;margin-left:1cm;margin-right:1cm;' +
-        'margin-top: 0.5cm;margin-bottom: 0.5cm;font-weight: normal} ' +
-      'th {text-align:left;font-size: 12pt;font-weight: ' +
-        'bold;margin-top: 0cm;margin-bottom: 0cm;} ' +
-      'td {font-size: 12pt;font-weight: normal;' +
-        'margin-top: 0cm;margin-bottom: 0cm} ' +
-      '</style><body>');
+    if smOutput < 2 then
+    begin
+      myText.Insert(0, '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"> ' +
+        '<html><head><meta http-equiv="content-type" content="text/html; ' +
+        'charset=UTF-8"><style type="text/css"> @page { margin-left: 2cm; ' +
+        'margin-right: 2cm; margin-top: 2cm; margin-bottom: 2cm;}</style></head>' +
+        '<style>h1 {text-align: center; font-size: 16pt; font-weight: bold; ' +
+        'margin-top: 0cm; margin-bottom: 2cm;} ' +
+        'h2 {font-size: 14pt; font-weight: bold;} ' +
+        'h3 {font-size: 14pt; font-weight: normal;font-style: italic;} ' +
+        'h4 {font-size: 12pt;font-weight: normal} ' +
+        'h5 {font-size: 12pt;font-weight: normal} ' +
+        'h6 {font-size: 12pt;font-weight: normal} ' +
+        'blockquote {font-size: 10pt;margin-left:1cm;margin-right:1cm;' +
+          'margin-top: 0.5cm;margin-bottom: 0.5cm;font-weight: normal} ' +
+        'th {text-align:left;font-size: 12pt;font-weight: ' +
+          'bold;margin-top: 0cm;margin-bottom: 0cm;} ' +
+        'td {font-size: 12pt;font-weight: normal;' +
+          'margin-top: 0cm;margin-bottom: 0cm} ' +
+        '</style><body>');
+    end
+    else
+    begin
+      myText.Insert(0, '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"> ' +
+        '<html><head><meta http-equiv="content-type" content="text/html; ' +
+        'charset=UTF-8"><style>' +
+        'p.MsoFootnoteText{font-size:10.0pt;} ' +
+        'span.MsoFootnoteReference{vertical-align:super;} ' +
+        'p.MsoQuote{margin-top:10.0pt;' +
+        'margin-right:40.0pt;margin-bottom:10.0pt;margin-left:40.0pt;' +
+        'font-size:10.0pt;} </style><body>');
+    end;
     myText.Insert(myText.Count, '</body></html>');
     Result := myText.Text;
   finally
@@ -4575,7 +4741,7 @@ begin
       end;
     end;
     stLine := dbText.Lines[i];
-    if IsHeader(stLine) = true then
+    if IsHeader(stLine) = True then
     begin
       dbText.SetTextAttributes(iPos, UTF8Pos(' ', stLine) - 1, myFont);
     end

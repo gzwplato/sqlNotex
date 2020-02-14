@@ -86,7 +86,7 @@ msgstr "Un software libero per gestire note e documenti"
 
 #: tfmcopyright.lbcopyrightname.caption
 msgctxt "tfmcopyright.lbcopyrightname.caption"
-msgid "sqlNotex 1.0.5"
+msgid "sqlNotex 1.0.6"
 msgstr ""
 
 #: tfmcopyright.lbcopyrightsite.caption
@@ -262,6 +262,7 @@ msgid "sqlNotex"
 msgstr ""
 
 #: tfmmain.lbpassword.caption
+msgctxt "tfmmain.lbpassword.caption"
 msgid "Password"
 msgstr ""
 
@@ -294,6 +295,10 @@ msgstr "Copia come HTML"
 msgctxt "tfmmain.mieditcopymarkdown.caption"
 msgid "Copy as Markdown"
 msgstr "Copia come Markdown"
+
+#: tfmmain.mieditcopyword.caption
+msgid "Copy for Word"
+msgstr "Copia per Word"
 
 #: tfmmain.mieditopenwriter.caption
 msgid "Open in Writer"
@@ -629,6 +634,10 @@ msgstr "Strumenti"
 msgid "Backup database"
 msgstr "Backup del database"
 
+#: tfmmain.mitoolscompact.caption
+msgid "Compact database"
+msgstr "Compatta il database"
+
 #: tfmmain.mitoolsoptions.caption
 msgctxt "tfmmain.mitoolsoptions.caption"
 msgid "Options"
@@ -942,6 +951,29 @@ msgstr "Spazio dopo paragrafi"
 #| msgid "Font name of the notes"
 msgid "Font name of the notes and of titles"
 msgstr "Nome font note e titoli"
+
+#: tfmpassword.bncancel.caption
+msgctxt "tfmpassword.bncancel.caption"
+msgid "Cancel"
+msgstr "Annulla"
+
+#: tfmpassword.bnok.caption
+msgctxt "tfmpassword.bnok.caption"
+msgid "OK"
+msgstr ""
+
+#: tfmpassword.caption
+msgctxt "tfmpassword.caption"
+msgid "Password"
+msgstr ""
+
+#: tfmpassword.lbsudopwd.caption
+msgid "Insert the sudo password"
+msgstr "Inserire la password di sudo"
+
+#: tfmpassword.lbsyspwd.caption
+msgid "Insert the SYSDBA password"
+msgstr "Inserire la password di SYSDBA"
 
 #: tfmrenametags.bncancel.caption
 msgctxt "tfmrenametags.bncancel.caption"
@@ -1317,6 +1349,14 @@ msgstr "Non è stato possibile trovare la nota."
 #: unit1.msg049
 msgid "No backup file has been specified in the options of the software."
 msgstr "Non è stato specificato alcun file di backup nelle opzioni del programma."
+
+#: unit1.msg050
+msgid "The database has been compacted."
+msgstr "Il database è stato compattato."
+
+#: unit1.msg051
+msgid "It was not possible to compact the database. Check that the passwords are correct"
+msgstr "Non è stato possibile compattare il database. Controllare che le password siano corrette."
 
 #: unit1.pdfmanual
 msgid "sqlnotex-manual.pdf"
