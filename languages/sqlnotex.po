@@ -86,7 +86,7 @@ msgstr ""
 
 #: tfmcopyright.lbcopyrightname.caption
 msgctxt "tfmcopyright.lbcopyrightname.caption"
-msgid "sqlNotex 1.0.6"
+msgid "sqlNotex 1.0.7"
 msgstr ""
 
 #: tfmcopyright.lbcopyrightsite.caption
@@ -207,6 +207,11 @@ msgstr ""
 #: tfmmain.grtags.columns[0].title.caption
 msgctxt "tfmmain.grtags.columns[0].title.caption"
 msgid "Tags"
+msgstr ""
+
+#: tfmmain.grtagslist.columns[0].title.caption
+msgctxt "tfmmain.grtagslist.columns[0].title.caption"
+msgid "Tags list"
 msgstr ""
 
 #: tfmmain.grtasks.columns[0].title.caption

@@ -84,6 +84,7 @@ end;
 
 procedure TfmInsertID.bnPasteClick(Sender: TObject);
 begin
+  edID.Clear;
   edID.PasteFromClipboard;
 end;
 

@@ -55,12 +55,14 @@ type
     dbTasks: TDBMemo;
     dbTitle: TDBEdit;
     dsImpExpNotes: TDataSource;
+    dsTagsList: TDataSource;
     dsTasks: TDataSource;
     edFind: TMemo;
     edPassword: TEdit;
     edUserName: TEdit;
     grAttachments: TDBGrid;
     grFind: TDBGrid;
+    grTagsList: TDBGrid;
     grTasks: TDBGrid;
     grLinks: TDBGrid;
     grTags: TDBGrid;
@@ -316,6 +318,10 @@ type
     zqImpExpNotes: TZQuery;
     zqNotesMODIFICATION_DATE: TDateTimeField;
     zqImpExpTags: TZQuery;
+    zqTagsListID: TLongintField;
+    zqTagsListID_NOTES: TLongintField;
+    zqTagsList: TZQuery;
+    zqTagsListTAG: TStringField;
     zqTasks: TZQuery;
     zqNotebooksCOMMENTS: TMemoField;
     zqNotebooksID: TLongintField;
@@ -387,6 +393,9 @@ type
     procedure grLinksDblClick(Sender: TObject);
     procedure grNotebooksDblClick(Sender: TObject);
     procedure grSectionsDblClick(Sender: TObject);
+    procedure grTagsListDblClick(Sender: TObject);
+    procedure grTagsListKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
     procedure grTasksDrawColumnCell(Sender: TObject; const Rect: TRect;
       DataCol: integer; Column: TColumn; State: TGridDrawState);
     procedure grTasksKeyDown(Sender: TObject; var Key: word; Shift: TShiftState);
@@ -737,6 +746,8 @@ begin
   grLinks.FocusRectVisible := False;
   grTasks.SelectedColor := myColor;
   grTasks.FocusRectVisible := False;
+  grTagsList.SelectedColor := myColor;
+  grTagsList.FocusRectVisible := False;
   grFind.SelectedColor := myColor;
   grFind.FocusRectVisible := False;
   sgTitles.FocusRectVisible := False;
@@ -823,6 +834,14 @@ begin
       MyIni.WriteInteger('sqlnotex', 'lastnote', iLastNote);
     end;
     MyIni.WriteString('sqlnotex', 'username', edUserName.Text);
+    if FileExistsUTF8(GetTempDir + 'sqlnotex.html') = True then
+    begin
+      DeleteFileUTF8(GetTempDir + 'sqlnotex.html');
+    end;
+    if FileExistsUTF8(GetTempDir + 'sqlnotex.odt') = True then
+    begin
+      DeleteFileUTF8(GetTempDir + 'sqlnotex.odt');
+    end;
   finally
     MyIni.Free;
   end;
@@ -1498,6 +1517,30 @@ begin
   miSectionsCommentsClick(nil);
 end;
 
+procedure TfmMain.grTagsListDblClick(Sender: TObject);
+begin
+  cbFields.ItemIndex := 3;
+  if edFind.Text = '' then
+  begin
+    edFind.Text := zqTagsListTAG.Value;
+  end
+  else
+  begin
+    edFind.Text := edFind.Text + ', ' + zqTagsListTAG.Value;
+  end;
+end;
+
+procedure TfmMain.grTagsListKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if key = 13 then
+  begin
+    key := 0;
+    grTagsListDblClick(nil);
+  end;
+end;
+
+
 procedure TfmMain.grLinksDblClick(Sender: TObject);
 begin
   if zqLinks.RecordCount > 0 then
@@ -2101,6 +2144,10 @@ end;
 
 procedure TfmMain.miSectionsChangeNotebookClick(Sender: TObject);
 begin
+  if zqSections.RecordCount = 0 then
+  begin
+    Exit;
+  end;
   fmInsertID.Caption := msg035;
   fmInsertID.lbIDKind.Caption := msg036;
   if blChangeIDSectionNote = False then
@@ -2664,6 +2711,10 @@ end;
 
 procedure TfmMain.miNoteschangeSectionClick(Sender: TObject);
 begin
+  if zqNotes.RecordCount = 0 then
+  begin
+    Exit;
+  end;
   pcPageControl.PageIndex := 0;
   fmInsertID.Caption := msg038;
   fmInsertID.lbIDKind.Caption := msg039;
@@ -2679,6 +2730,8 @@ begin
     zqNotesID_SECTIONS.Value := StrToInt(fmInsertID.edID.Text);
     zqNotes.Post;
     zqNotes.ApplyUpdates;
+    blLoadNotes := True;
+    zqNotesAfterScroll(nil);
   except
     zqNotes.CancelUpdates;
     MessageDlg(msg003, mtWarning, [mbOK], 0);
@@ -3444,6 +3497,7 @@ begin
   zqNotes.Open;
   zqAttachments.Open;
   zqTags.Open;
+  zqTagsList.Open;
   zqLinks.Open;
   zqTasks.Open;
   miFileSave.Enabled := False;
@@ -3651,6 +3705,7 @@ begin
       zqNotes.Refresh;
       zqAttachments.Refresh;
       zqTags.Refresh;
+      zqTagsList.Refresh;
       zqLinks.Refresh;
       zqTasks.Refresh;
       zqNotesAfterScroll(nil);

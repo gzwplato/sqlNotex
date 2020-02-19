@@ -29,7 +29,10 @@ uses
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, zcomponent, Unit1, Unit2, Unit3, unitcopyright, Unit4,
-  Unit6, Unit7, Unit8, Unit9, Unit5, Unit10;
+  Unit6, Unit7, Unit8, Unit9, Unit5, Unit10,
+  {$IFDEF UNIX}
+    clocale;
+  {$ENDIF}
 
 {$R *.res}
 

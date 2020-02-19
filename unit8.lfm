@@ -138,5 +138,6 @@ object fmShowAllTasks: TfmShowAllTasks
     TitleStyle = tsNative
     OnDrawColumnCell = grTasksDrawColumnCell
     OnDblClick = grTasksDblClick
+    OnKeyDown = grTasksKeyDown
   end
 end

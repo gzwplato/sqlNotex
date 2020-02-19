@@ -1,7 +1,7 @@
 object fmMain: TfmMain
-  Left = 241
+  Left = 390
   Height = 754
-  Top = 202
+  Top = 201
   Width = 1405
   ActiveControl = edPassword
   AllowDropFiles = True
@@ -1398,10 +1398,10 @@ object fmMain: TfmMain
         TabOrder = 1
       end
       object grFind: TDBGrid
-        Left = 392
+        Left = 536
         Height = 222
         Top = 16
-        Width = 980
+        Width = 836
         Anchors = [akTop, akLeft, akRight, akBottom]
         BorderStyle = bsNone
         Color = clWindow
@@ -1426,7 +1426,7 @@ object fmMain: TfmMain
         Options = [dgTitles, dgColumnResize, dgColLines, dgTabs, dgRowSelect, dgAlwaysShowSelection, dgCancelOnExit, dgDisableInsert]
         ReadOnly = True
         Scrollbars = ssAutoBoth
-        TabOrder = 2
+        TabOrder = 5
         TitleFont.Style = [fsBold]
         TitleStyle = tsNative
         OnDblClick = grFindDblClick
@@ -1462,7 +1462,7 @@ object fmMain: TfmMain
         Alignment = taLeftJustify
         Anchors = [akLeft, akBottom]
         Caption = 'Only on current notebook'
-        TabOrder = 3
+        TabOrder = 2
       end
       object bnFind: TButton
         Left = 285
@@ -1472,7 +1472,7 @@ object fmMain: TfmMain
         Anchors = [akLeft, akBottom]
         Caption = 'Find'
         OnClick = bnFindClick
-        TabOrder = 4
+        TabOrder = 3
       end
       object bvFind: TBevel
         Left = 32
@@ -1480,6 +1480,30 @@ object fmMain: TfmMain
         Top = 168
         Width = 328
         Shape = bsBottomLine
+      end
+      object grTagsList: TDBGrid
+        Left = 376
+        Height = 222
+        Top = 16
+        Width = 136
+        Anchors = [akTop, akLeft, akBottom]
+        BorderStyle = bsNone
+        Color = clWindow
+        Columns = <        
+          item
+            Title.Caption = 'Tags list'
+            FieldName = 'TAG'
+          end>
+        DataSource = dsTagsList
+        FixedCols = 0
+        Options = [dgTitles, dgColumnResize, dgColLines, dgTabs, dgRowSelect, dgAlwaysShowSelection, dgCancelOnExit, dgDisableInsert]
+        ReadOnly = True
+        Scrollbars = ssAutoVertical
+        TabOrder = 4
+        TitleFont.Style = [fsBold]
+        TitleStyle = tsNative
+        OnDblClick = grTagsListDblClick
+        OnKeyDown = grTagsListKeyDown
       end
     end
     object spBottom: TSplitter
@@ -4101,5 +4125,55 @@ object fmMain: TfmMain
         Name = 'OLD_ID'
         ParamType = ptUnknown
       end>
+  end
+  object zqTagsList: TZQuery
+    Connection = zcConnection
+    BeforeInsert = zqTagsBeforeInsert
+    AfterInsert = zqTagsAfterInsert
+    BeforeDelete = zqTagsBeforeDelete
+    AfterDelete = zqTagsAfterDelete
+    SQL.Strings = (
+      'Select distinct * from Tags'
+      'where tags.tag is not null'
+      'order by Tag'
+    )
+    Params = <>
+    MasterFields = 'ID'
+    left = 448
+    top = 432
+    object zqTagsListID: TLongintField
+      FieldKind = fkData
+      FieldName = 'ID'
+      Index = 0
+      LookupCache = False
+      ProviderFlags = [pfInUpdate, pfInWhere]
+      ReadOnly = False
+      Required = True
+    end
+    object zqTagsListID_NOTES: TLongintField
+      FieldKind = fkData
+      FieldName = 'ID_NOTES'
+      Index = 1
+      LookupCache = False
+      ProviderFlags = [pfInUpdate, pfInWhere]
+      ReadOnly = False
+      Required = True
+    end
+    object zqTagsListTAG: TStringField
+      FieldKind = fkData
+      FieldName = 'TAG'
+      Index = 2
+      LookupCache = False
+      ProviderFlags = [pfInUpdate, pfInWhere]
+      ReadOnly = False
+      Required = False
+      Size = 200
+    end
+  end
+  object dsTagsList: TDataSource
+    DataSet = zqTagsList
+    OnStateChange = StateChange
+    left = 544
+    top = 432
   end
 end

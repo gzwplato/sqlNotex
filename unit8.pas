@@ -44,6 +44,8 @@ type
     procedure grTasksDblClick(Sender: TObject);
     procedure grTasksDrawColumnCell(Sender: TObject; const Rect: TRect;
       DataCol: Integer; Column: TColumn; State: TGridDrawState);
+    procedure grTasksKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState
+      );
     procedure nbOKClick(Sender: TObject);
   private
     procedure FindTask;
@@ -81,6 +83,16 @@ begin
     grTasks.canvas.Font.Color := clBlue;
   end;
   grTasks.DefaultDrawColumnCell(Rect, DataCol, Column, State);
+end;
+
+procedure TfmShowAllTasks.grTasksKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if key = 13 then
+  begin
+    key := 0;
+    grTasksDblClick(nil)
+  end;
 end;
 
 procedure TfmShowAllTasks.grTasksDblClick(Sender: TObject);
