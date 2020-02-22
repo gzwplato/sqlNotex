@@ -27,7 +27,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ComCtrls,
-  ExtCtrls;
+  ExtCtrls, LazUTF8;
 
 type
 
@@ -131,6 +131,23 @@ begin
       zcConnection.Database := edPath.Text;
     end;
     stBackupFile := edBackup.Text;
+    if UTF8LowerCase(edServer.Text) <> 'localhost' then
+    begin
+      fmMain.miToolsBackup.Enabled := False;
+      fmMain.miToolsRestore.Enabled := False;
+      fmMain.miToolsCompact.Enabled := False;
+      fmMain.bnBackup.Enabled := False;
+      fmMain.bnRestore.Enabled := False;
+    end
+    else
+    if fmMain.zcConnection.Connected = False then
+    begin
+      fmMain.miToolsBackup.Enabled := True;
+      fmMain.miToolsRestore.Enabled := True;
+      fmMain.miToolsCompact.Enabled := True;
+      fmMain.bnBackup.Enabled := True;
+      fmMain.bnRestore.Enabled := True;
+    end;
   end;
 end;
 

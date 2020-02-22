@@ -86,6 +86,7 @@ type
     lbInfo: TLabel;
     lbTitle: TLabel;
     lbID: TLabel;
+    miEditOpenAllWriter: TMenuItem;
     miToolsCompact: TMenuItem;
     miEditCopyWord: TMenuItem;
     miEditBookmarks: TMenuItem;
@@ -116,7 +117,7 @@ type
     miSectionsCopyID: TMenuItem;
     miNotebooksCopyID: TMenuItem;
     N25: TMenuItem;
-    miEditOpenWriter: TMenuItem;
+    miEditOpenCurrWriter: TMenuItem;
     miFileClose: TMenuItem;
     N24: TMenuItem;
     miNotesShowAllTasks: TMenuItem;
@@ -307,9 +308,19 @@ type
     zqImpExpNotesORD: TLongintField;
     zqImpExpNotesTEXT: TMemoField;
     zqImpExpNotesTITLE: TStringField;
+    zqImpExpTasks: TZQuery;
     zqImpExpTagsID: TLongintField;
     zqImpExpTagsID_NOTES: TLongintField;
     zqImpExpTagsTAG: TStringField;
+    zqImpExpTasksCOMMENTS: TMemoField;
+    zqImpExpTasksDONE: TSmallintField;
+    zqImpExpTasksEND_DATE: TDateField;
+    zqImpExpTasksID: TLongintField;
+    zqImpExpTasksID_NOTES: TLongintField;
+    zqImpExpTasksPRIORITY: TStringField;
+    zqImpExpTasksRESOURCES: TStringField;
+    zqImpExpTasksSTART_DATE: TDateField;
+    zqImpExpTasksTITLE: TStringField;
     zqLinks: TZQuery;
     zqLinksID: TLongintField;
     zqLinksID_NOTES: TLongintField;
@@ -360,6 +371,7 @@ type
     zqRenameTags: TZQuery;
     zqAllTasks: TZQuery;
     zuImpExpAttachments: TZUpdateSQL;
+    zuImpExpTasks: TZUpdateSQL;
     zuLinks: TZUpdateSQL;
     zuImpExpNotes: TZUpdateSQL;
     zuRenameTags: TZUpdateSQL;
@@ -407,7 +419,7 @@ type
     procedure miFileImportClick(Sender: TObject);
     procedure miNotesImportClick(Sender: TObject);
     procedure miCopyRightManualClick(Sender: TObject);
-    procedure miEditOpenWriterClick(Sender: TObject);
+    procedure miEditOpenCurrWriterClick(Sender: TObject);
     procedure miEditPreviewClick(Sender: TObject);
     procedure miFileCloseClick(Sender: TObject);
     procedure miNotebooksCopyIDClick(Sender: TObject);
@@ -509,11 +521,12 @@ type
     function CleanXML(stXMLText: string): string;
     function ColorToHtml(clColor: TColor): string;
     procedure Connect;
-    function CopyAsHTML(smOutput: SmallInt): string;
+    function CopyAsHTML(smOutput: SmallInt; blAll: Boolean): string;
     procedure FindNotes;
     function GenID(GenName: string): integer;
     procedure Disconnect;
     function GetDbSize(stDatabase: String): String;
+    function GetNotexTempDir: String;
     function IsHeader(stLine: String): boolean;
     procedure SelectInsertFootnote;
     procedure RenumberFootnotes;
@@ -669,6 +682,10 @@ begin
   if DirectoryExists(myHomeDir) = False then
   begin
     CreateDirUTF8(myHomeDir);
+  end;
+  if DirectoryExists(GetNotexTempDir) = False then
+  begin
+    CreateDirUTF8(GetNotexTempDir);
   end;
   if FileExistsUTF8(myHomeDir + myConfigFile) then
   begin
@@ -834,13 +851,9 @@ begin
       MyIni.WriteInteger('sqlnotex', 'lastnote', iLastNote);
     end;
     MyIni.WriteString('sqlnotex', 'username', edUserName.Text);
-    if FileExistsUTF8(GetTempDir + 'sqlnotex.html') = True then
+    if DirectoryExistsUTF8(GetNotexTempDir) = True then
     begin
-      DeleteFileUTF8(GetTempDir + 'sqlnotex.html');
-    end;
-    if FileExistsUTF8(GetTempDir + 'sqlnotex.odt') = True then
-    begin
-      DeleteFileUTF8(GetTempDir + 'sqlnotex.odt');
+      DeleteDirectory(GetNotexTempDir, False);
     end;
   finally
     MyIni.Free;
@@ -891,7 +904,7 @@ begin
   end
   else if ((key > 47) and (key < 58) and (Shift = [ssCtrl])) then
   begin
-    if fmBookmarks.sgBookmarks.Cells[0, key - 48] <> '' then
+    if fmBookmarks.sgBookmarks.Cells[1, key - 48] <> '' then
     begin
       SaveAll;
       blLoadNotes := False;
@@ -1592,6 +1605,7 @@ begin
       zqImpExpNotes.Open;
       zqImpExpAttachments.Open;
       zqImpExpTags.Open;
+      zqImpExpTasks.Open;
       WriteLn(myFile, 'File exported by sqlNotex');
       if zqImpExpNotes.RecordCount > 0 then
       begin
@@ -1641,6 +1655,24 @@ begin
               zqImpExpTags.Next;
             end;
           end;
+          if zqImpExpTasks.RecordCount > 0 then
+          begin
+            while zqImpExpTasks.EOF = False do
+            begin
+              WriteLn(myFile, '<task>');
+              WriteLn(myFile,
+                zqImpExpTasksTITLE.AsString + #9 +
+                zqImpExpTasksSTART_DATE.AsString + #9 +
+                zqImpExpTasksEND_DATE.AsString + #9 +
+                zqImpExpTasksDONE.AsString + #9 +
+                zqImpExpTasksPRIORITY.AsString + #9 +
+                zqImpExpTasksRESOURCES.AsString + #9 +
+                StringReplace(zqImpExpTasksCOMMENTS.AsString, LineEnding,
+                '<p>', [rfReplaceAll]));
+              WriteLn(myFile, '</task>');
+              zqImpExpTasks.Next;
+            end;
+          end;
           zqImpExpNotes.Next;
         end;
       end;
@@ -1649,6 +1681,7 @@ begin
       zqImpExpNotes.Close;
       zqImpExpAttachments.Close;
       zqImpExpTags.Close;
+      zqImpExpTasks.Close;
       Screen.Cursor := crDefault;
     end;
   except;
@@ -1659,7 +1692,7 @@ end;
 procedure TfmMain.miFileImportClick(Sender: TObject);
   var
     myFile: TextFile;
-    stLine: String;
+    stLine, stField: String;
     iField: SmallInt;
 begin
   odOpenDialog.Filter := fileext003;
@@ -1679,6 +1712,7 @@ begin
      zqImpExpNotes.Open;
      zqImpExpAttachments.Open;
      zqImpExpTags.Open;
+     zqImpExpTasks.Open;
      while not EOF(myFile) do
      begin
        ReadLn(myFile, stLine);
@@ -1750,6 +1784,24 @@ begin
          zqImpExpTags.ApplyUpdates;
        end
        else
+       if stLine = '<task>' then
+       begin
+         iField := 4;
+         zqImpExpTasks.Append;
+         zqImpExpTasksID.Value := GenID('GEN_TASKS_ID');
+         zqImpExpTasksID_NOTES.Value := zqImpExpNotesID.Value;
+         zqImpExpTasks.Post;
+         zqImpExpTasks.ApplyUpdates;
+         zqImpExpTasks.Edit;
+       end
+       else
+       if stLine = '</task>' then
+       begin
+         iField := 4;
+         zqImpExpTasks.Post;
+         zqImpExpTasks.ApplyUpdates;
+       end
+       else
        begin
          if iField = 0 then
          begin
@@ -1780,6 +1832,37 @@ begin
          if iField = 3 then
          begin
            zqImpExpTagsTAG.Value := stLine;
+         end
+         else
+         if iField = 4 then
+         begin
+           stField := stLine;
+           zqImpExpTasksTITLE.AsString :=
+             UTF8Copy(stField, 1, UTF8Pos(#9, stField) - 1);
+           stField := UTF8Copy(stField, UTF8Pos(#9, stField) + 1,
+             UTF8Length(stField));
+           zqImpExpTasksSTART_DATE.AsString :=
+             UTF8Copy(stField, 1, UTF8Pos(#9, stField) - 1);
+           stField := UTF8Copy(stField, UTF8Pos(#9, stField) + 1,
+             UTF8Length(stField));
+           zqImpExpTasksEND_DATE.AsString :=
+             UTF8Copy(stField, 1, UTF8Pos(#9, stField) - 1);
+           stField := UTF8Copy(stField, UTF8Pos(#9, stField) + 1,
+             UTF8Length(stField));
+           zqImpExpTasksDONE.AsString :=
+             UTF8Copy(stField, 1, UTF8Pos(#9, stField) - 1);
+           stField := UTF8Copy(stField, UTF8Pos(#9, stField) + 1,
+             UTF8Length(stField));
+           zqImpExpTasksPRIORITY.AsString :=
+             UTF8Copy(stField, 1, UTF8Pos(#9, stField) - 1);
+           stField := UTF8Copy(stField, UTF8Pos(#9, stField) + 1,
+             UTF8Length(stField));
+           zqImpExpTasksRESOURCES.AsString :=
+             UTF8Copy(stField, 1, UTF8Pos(#9, stField) - 1);
+           stField := UTF8Copy(stField, UTF8Pos(#9, stField) + 1,
+             UTF8Length(stField));
+           zqImpExpTasksCOMMENTS.AsString := StringReplace(stField, '<p>',
+             LineEnding, [rfReplaceAll]);
          end;
        end;
      end;
@@ -1788,6 +1871,7 @@ begin
       zqImpExpNotes.Close;
       zqImpExpAttachments.Close;
       zqImpExpTags.Close;
+      zqImpExpTasks.Close;
       RefreshData;
       Screen.Cursor := crDefault;
     end;
@@ -1846,7 +1930,7 @@ var
   Stream: TStream;
 begin
   SaveAll;
-  Stream := TStringStream.Create(CopyAsHTML(0));
+  Stream := TStringStream.Create(CopyAsHTML(0, False));
   try
     Stream.Position := 0;
     Clipboard.AddFormat(CF_HTML, Stream);
@@ -1860,7 +1944,7 @@ procedure TfmMain.miEditCopyWordClick(Sender: TObject);
     Stream: TStream;
   begin
     SaveAll;
-    Stream := TStringStream.Create(CopyAsHTML(2));
+    Stream := TStringStream.Create(CopyAsHTML(2, False));
     try
       Stream.Position := 0;
       Clipboard.AddFormat(CF_HTML, Stream);
@@ -1877,15 +1961,15 @@ begin
   if dbText.Text <> '' then
     try
       myMemo := TMemo.Create(self);
-      myMemo.Text := CopyAsHTML(0);
-      myMemo.Lines.SaveToFile(GetTempDir + 'sqlnotex.html');
-      OpenDocument(GetTempDir + 'sqlnotex.html');
+      myMemo.Text := CopyAsHTML(0, False);
+      myMemo.Lines.SaveToFile(GetNotexTempDir + 'sqlnotex.html');
+      OpenDocument(GetNotexTempDir + 'sqlnotex.html');
     finally
       myMemo.Free;
     end;
 end;
 
-procedure TfmMain.miEditOpenWriterClick(Sender: TObject);
+procedure TfmMain.miEditOpenCurrWriterClick(Sender: TObject);
 var
   myMemo: TMemo;
 begin
@@ -1893,9 +1977,16 @@ begin
   if dbText.Text <> '' then
     try
       myMemo := TMemo.Create(self);
-      myMemo.Text := CopyAsHTML(1);
-      myMemo.Lines.SaveToFile(GetTempDir + 'sqlnotex.odt');
-      OpenDocument(GetTempDir + 'sqlnotex.odt');
+      if Sender = miEditOpenCurrWriter then
+      begin
+        myMemo.Text := CopyAsHTML(1, False);
+      end
+      else
+      begin
+        myMemo.Text := CopyAsHTML(1, True);
+      end;
+      myMemo.Lines.SaveToFile(GetNotexTempDir + 'sqlnotex.odt');
+      OpenDocument(GetNotexTempDir + 'sqlnotex.odt');
     finally
       myMemo.Free;
     end;
@@ -2162,6 +2253,8 @@ begin
     zqSectionsID_NOTEBOOKS.Value := StrToInt(fmInsertID.edID.Text);
     zqSections.Post;
     zqSections.ApplyUpdates;
+    blLoadNotes := True;
+    zqNotesAfterScroll(nil);
   except
     zqSections.CancelUpdates;
     MessageDlg(msg003, mtWarning, [mbOK], 0);
@@ -2348,8 +2441,8 @@ procedure TfmMain.miNotesAttachmentsOpenClick(Sender: TObject);
 begin
   if zqAttachments.RecordCount > 0 then
   begin
-    zqAttachmentsATTACHMENT.SaveToFile(GetTempDir + zqAttachmentsTITLE.Value);
-    OpenDocument(GetTempDir + zqAttachmentsTITLE.Value);
+    zqAttachmentsATTACHMENT.SaveToFile(GetNotexTempDir + zqAttachmentsTITLE.Value);
+    OpenDocument(GetNotexTempDir + zqAttachmentsTITLE.Value);
   end;
 end;
 
@@ -2488,7 +2581,10 @@ end;
 procedure TfmMain.miNotesTasksNewClick(Sender: TObject);
 begin
   pcPageControl.PageIndex := 1;
+  grTasks.SetFocus;
+  grTasks.SelectedField := zqTasksTITLE;
   zqTasks.Append;
+  grTasks.EditorMode := True;
 end;
 
 procedure TfmMain.miNotesTasksDeleteClick(Sender: TObject);
@@ -2572,10 +2668,10 @@ begin
           myList := TStringList.Create;
           stFileOrig := TStringList.Create;
           myList.Add('content.xml');
-          myZip.OutputPath := GetTempDir;
+          myZip.OutputPath := GetNotexTempDir;
           myZip.FileName := odOpenDialog.Files[iFile];
           myZip.UnZipFiles(myList);
-          stFileOrig.LoadFromFile(GetTempDir + DirectorySeparator + 'content.xml');
+          stFileOrig.LoadFromFile(GetNotexTempDir + DirectorySeparator + 'content.xml');
           stFileOrig.Text := StringReplace(stFileOrig.Text,
             '<text:note-citation>', ' [^', [rfReplaceAll]);
           stFileOrig.Text := StringReplace(stFileOrig.Text,
@@ -2595,7 +2691,7 @@ begin
             ExtractFileName(LazFileUtils.ExtractFileNameWithoutExt(odOpenDialog.Files[iFile]));
           zqNotes.Post;
           zqNotes.ApplyUpdates;
-          DeleteFileUTF8(GetTempDir + DirectorySeparator + 'content.xml');
+          DeleteFileUTF8(GetNotexTempDir + DirectorySeparator + 'content.xml');
           zqAttachments.Append;
           zqAttachments.Edit;
           zqAttachmentsATTACHMENT.LoadFromFile(odOpenDialog.Files[iFile]);
@@ -2618,12 +2714,12 @@ begin
           myZip := TUnZipper.Create;
           myList := TStringList.Create;
           stFileOrig := TStringList.Create;
-          myZip.OutputPath := GetTempDir;
+          myZip.OutputPath := GetNotexTempDir;
           myZip.FileName := odOpenDialog.Files[iFile];
           myZip.UnZipAllFiles;
-          if FileExistsUTF8(GetTempDir + 'word/document.xml') = True then
+          if FileExistsUTF8(GetNotexTempDir + 'word/document.xml') = True then
           begin
-            stFileOrig.LoadFromFile(GetTempDir + 'word/document.xml');
+            stFileOrig.LoadFromFile(GetNotexTempDir + 'word/document.xml');
             stFileOrig.Text :=
               StringReplace(stFileOrig.Text, '</w:p>', LineEnding, [rfReplaceAll]);
             i := 0;
@@ -2644,9 +2740,9 @@ begin
             end;
             dbText.Text := dbText.Text + CleanXML(stFileOrig.Text) + LineEnding;
           end;
-          if FileExistsUTF8(GetTempDir + 'word/footnotes.xml') = True then
+          if FileExistsUTF8(GetNotexTempDir + 'word/footnotes.xml') = True then
           begin
-            stFileOrig.LoadFromFile(GetTempDir + 'word/footnotes.xml');
+            stFileOrig.LoadFromFile(GetNotexTempDir + 'word/footnotes.xml');
             stFileOrig.Text :=
               StringReplace(stFileOrig.Text, '</w:p>', LineEnding, [rfReplaceAll]);
             i := 0;
@@ -2659,9 +2755,9 @@ begin
             end;
             dbText.Text := dbText.Text + CleanXML(stFileOrig.Text) + LineEnding;
           end;
-          if FileExistsUTF8(GetTempDir + 'word/endnotes.xml') = True then
+          if FileExistsUTF8(GetNotexTempDir + 'word/endnotes.xml') = True then
           begin
-            stFileOrig.LoadFromFile(GetTempDir + 'word/endnotes.xml');
+            stFileOrig.LoadFromFile(GetNotexTempDir + 'word/endnotes.xml');
             stFileOrig.Text :=
               StringReplace(stFileOrig.Text, '</w:p>', LineEnding, [rfReplaceAll]);
             i := 0;
@@ -2674,10 +2770,10 @@ begin
             end;
             dbText.Text := dbText.Text + CleanXML(stFileOrig.Text) + LineEnding;
           end;
-          if DirectoryExistsUTF8(GetTempDir + 'word') = True then
+          if DirectoryExistsUTF8(GetNotexTempDir + 'word') = True then
           begin
-            DeleteDirectory(GetTempDir + 'word', True);
-            RemoveDirUTF8(GetTempDir + 'word');
+            DeleteDirectory(GetNotexTempDir + 'word', True);
+            RemoveDirUTF8(GetNotexTempDir + 'word');
           end;
           zqNotesTITLE.Value :=
             ExtractFileName(LazFileUtils.ExtractFileNameWithoutExt(odOpenDialog.Files[iFile]));
@@ -3402,7 +3498,8 @@ begin
   miEditCopyHTML.Enabled := False;
   miEditCopyWord.Enabled := False;
   miEditPreview.Enabled := False;
-  miEditOpenWriter.Enabled := False;
+  miEditOpenCurrWriter.Enabled := False;
+  miEditOpenAllWriter.Enabled := False;
   miEditBookmarks.Enabled := False;
   miNotebooksNew.Enabled := False;
   miNotebooksDelete.Enabled := False;
@@ -3458,9 +3555,22 @@ begin
   miNotesSearch.Enabled := False;
   miNotesFind.Enabled := False;
   miToolsShowEditor.Enabled := False;
-  miToolsBackup.Enabled := True;
-  miToolsRestore.Enabled := True;
-  miToolsCompact.Enabled := True;
+  if UTF8LowerCase(zcConnection.HostName) = 'localhost' then
+  begin
+    miToolsBackup.Enabled := True;
+    miToolsRestore.Enabled := True;
+    miToolsCompact.Enabled := True;
+    bnBackup.Enabled := True;
+    bnRestore.Enabled := True;
+  end
+  else
+  begin
+    miToolsBackup.Enabled := False;
+    miToolsRestore.Enabled := False;
+    miToolsCompact.Enabled := False;
+    bnBackup.Enabled := False;
+    bnRestore.Enabled := False;
+  end;
   fmMain.KeyPreview := False;
   shSave.Brush.Color := clForm;
   pnMain.Visible := False;
@@ -3511,7 +3621,8 @@ begin
   miEditCopyHTML.Enabled := True;
   miEditCopyWord.Enabled := True;
   miEditPreview.Enabled := True;
-  miEditOpenWriter.Enabled := True;
+  miEditOpenCurrWriter.Enabled := True;
+  miEditOpenAllWriter.Enabled := True;
   miEditBookmarks.Enabled := True;
   miNotebooksNew.Enabled := True;
   miNotebooksDelete.Enabled := True;
@@ -3912,17 +4023,18 @@ begin
   end;
 end;
 
-function TfmMain.CopyAsHTML(smOutput:SmallInt): string;
+function TfmMain.CopyAsHTML(smOutput:SmallInt; blAll: Boolean): string;
 var
-  myText, myFootnotes: TStringList;
+  myOrigText, myText, myFootnotes: TStringList;
   blNumList, blBulList, blQuote, blCode, blLink, blTable: boolean;
   i, n, iTemp, iTask, iLink: integer;
   stLine, stStartDate, stEndDate, stFootnote, stPicture,
   stLink, stTextLink: string;
 begin
-  if dbText.Text = '' then
+  if ((dbText.Text = '') and (blAll = False)) then
     Abort;
   myText := TStringList.Create;
+  myOrigText := TStringList.Create;
   myFootnotes := TStringList.Create;
   blNumList := False;
   blBulList := False;
@@ -3931,516 +4043,524 @@ begin
   blTable := False;
   Screen.Cursor := crHourGlass;
   Application.ProcessMessages;
+  zqImpExpNotes.Open;
+  zqImpExpNotes.Locate('ID', zqNotesID.Value, []);
+  zqImpExpAttachments.Open;
+  zqImpExpTasks.Open;
   // smOutput - 0: browser, 1: Writer, 2: Word
   try
-    for i := 0 to dbText.Lines.Count - 1 do
+    if blAll = True then
     begin
-      stLine := dbText.Lines[i];
-      // Escape
-      if UTF8copy(stLine, 1, 1) = '>' then
+      zqImpExpNotes.First;
+    end;
+    while zqImpExpNotes.EOF = False do
+    begin
+      myOrigText.Text := zqImpExpNotesTEXT.Value;
+      for i := 0 to myOrigText.Count - 1 do
       begin
-        stLine := #1 + UTF8copy(stLine, 2, UTF8Length(stLine));
-      end;
-      stLine := StringReplace(stLine, '&', '&amp;', [rfReplaceAll]);
-      stLine := StringReplace(stLine, '<', '&lt;', [rfReplaceAll]);
-      stLine := StringReplace(stLine, '>', '&gt;', [rfReplaceAll]);
-      if UTF8copy(stLine, 1, 1) = #1 then
-      begin
-        stLine := '>' + UTF8copy(stLine, 2, UTF8Length(stLine));
-      end;
-      // Start lists
-      if ((UTF8Copy(stLine, 1, 2) = '* ') or
-        (UTF8Copy(stLine, 1, 2) = '- ') or (UTF8Copy(stLine, 1, 2) = '+ ')) then
-      begin
-        if blBulList = False then
+        stLine := myOrigText[i];
+        // Escape
+        if UTF8copy(stLine, 1, 1) = '>' then
         begin
-          myText.Add('<ul>');
-          blBulList := True;
+          stLine := #1 + UTF8copy(stLine, 2, UTF8Length(stLine));
         end;
-      end
-      else
-      begin
-        if blBulList = True then
+        stLine := StringReplace(stLine, '&', '&amp;', [rfReplaceAll]);
+        stLine := StringReplace(stLine, '<', '&lt;', [rfReplaceAll]);
+        stLine := StringReplace(stLine, '>', '&gt;', [rfReplaceAll]);
+        if UTF8copy(stLine, 1, 1) = #1 then
         begin
-          myText.Add('</ul>');
-          blBulList := False;
+          stLine := '>' + UTF8copy(stLine, 2, UTF8Length(stLine));
         end;
-      end;
-      if ((UTF8Length(stLine) > 0) and
-        (TryStrToInt(UTF8Copy(stLine, 1, UTF8Pos('.', stLine) - 1), iTemp))) then
-      begin
-        if blNumList = False then
+        // Start lists
+        if ((UTF8Copy(stLine, 1, 2) = '* ') or
+          (UTF8Copy(stLine, 1, 2) = '- ') or (UTF8Copy(stLine, 1, 2) = '+ ')) then
         begin
-          myText.Add('<ol>');
-          blNumList := True;
-        end;
-      end
-      else
-      begin
-        if blNumList = True then
-        begin
-          myText.Add('</ol>');
-          blNumList := False;
-        end;
-      end;
-      // Header
-      if UTF8Copy(stLine, 1, 3) = '---' then
-      begin
-        myText.Add('<hr>');
-      end
-      else
-      // Quote
-      if UTF8Copy(stLine, 1, 2) = '> ' then
-      begin
-        if smOutput = 2 then
-        begin;
-          myText.Add('<p class=MsoQuote>');
-        end;
-        if blQuote = False then
-        begin
-          if smOutput < 2 then
+          if blBulList = False then
           begin
-            myText.Add('<blockquote>');
+            myText.Add('<ul>');
+            blBulList := True;
           end;
-          blQuote := True;
-        end;
-      end
-      else
-      begin
-        if blQuote = True then
-        begin
-          if smOutput < 2 then
-          begin
-            myText.Add('</blockquote>');
-          end;
-          blQuote := False;
-        end;
-      end;
-      // Code
-      if UTF8Copy(stLine, 1, 3) = '```' then
-      begin
-        if blCode = False then
-        begin
-          myText.Add('<code>');
-          blCode := True;
         end
         else
         begin
-          myText.Add('</code>');
-          blCode := False;
+          if blBulList = True then
+          begin
+            myText.Add('</ul>');
+            blBulList := False;
+          end;
         end;
-      end;
-      // Table
-      if UTF8Copy(stLine, 1, 1) = '|' then
-      begin
-        if blTable = False then
+        if ((UTF8Length(stLine) > 0) and
+          (TryStrToInt(UTF8Copy(stLine, 1, UTF8Pos('.', stLine) - 1), iTemp))) then
         begin
-          myText.Add('<table align="center" style="width:100%">');
-          blTable := True;
-        end;
-      end
-      else
-      begin
-        if blTable = True then
+          if blNumList = False then
+          begin
+            myText.Add('<ol>');
+            blNumList := True;
+          end;
+        end
+        else
         begin
-          myText.Add('</table>');
-          blTable := False;
+          if blNumList = True then
+          begin
+            myText.Add('</ol>');
+            blNumList := False;
+          end;
         end;
-      end;
-      // Headings
-      if UTF8Copy(stLine, 1, 7) = '###### ' then
-      begin
-        stLine := UTF8Copy(stLine, 8, UTF8Length(stLine));
-        myText.Add('<h6>' + stLine + '</h6>');
-      end
-      else if UTF8Copy(stLine, 1, 6) = '##### ' then
-      begin
-        stLine := UTF8Copy(stLine, 7, UTF8Length(stLine));
-        myText.Add('<h5>' + stLine + '</h5>');
-      end
-      else if UTF8Copy(stLine, 1, 5) = '#### ' then
-      begin
-        stLine := UTF8Copy(stLine, 6, UTF8Length(stLine));
-        myText.Add('<h4>' + stLine + '</h4>');
-      end
-      else if UTF8Copy(stLine, 1, 4) = '### ' then
-      begin
-        stLine := UTF8Copy(stLine, 5, UTF8Length(stLine));
-        myText.Add('<h3>' + stLine + '</h3>');
-      end
-      else if UTF8Copy(stLine, 1, 3) = '## ' then
-      begin
-        stLine := UTF8Copy(stLine, 4, UTF8Length(stLine));
-        myText.Add('<h2>' + stLine + '</h2>');
-      end
-      else if UTF8Copy(stLine, 1, 2) = '# ' then
-      begin
-        stLine := UTF8Copy(stLine, 3, UTF8Length(stLine));
-        myText.Add('<h1>' + stLine + '</h1>');
-      end
-      // Lists quotes and code
-      else if ((UTF8Copy(stLine, 1, 2) = '* ') or (UTF8Copy(stLine, 1, 2) = '- ') or
-        (UTF8Copy(stLine, 1, 2) = '+ ')) then
-      begin
-        stLine := UTF8Copy(stLine, 3, UTF8Length(stLine));
-        myText.Add('<li>' + stLine + '</li>');
-      end
-      else if ((UTF8Length(stLine) > 0) and
-        (TryStrToInt(UTF8Copy(stLine, 1, UTF8Pos('.', stLine) - 1), iTemp))) then
-      begin
-        stLine := UTF8Copy(stLine, UTF8Pos('.', stLine) + 2, UTF8Length(stLine));
-        myText.Add('<li>' + stLine + '</li>');
-      end
-      else if UTF8Copy(stLine, 1, 2) = '> ' then
-      begin
-        stLine := UTF8Copy(stLine, 3, UTF8Length(stLine));
-        myText.Add(stLine + '<p>');
-      end
-      // Tables
-      else if ((UTF8Copy(stLine, 1, 4) = '|---') or
-        (UTF8Copy(stLine, 1, 5) = '| ---')) then
-      begin
-        stLine := '<tr><td align="left" style="font-weight: normal;">&nbsp;</td>';
-        myText.Add(stLine);
-      end
-      else if UTF8Copy(stLine, 1, 1) = '|' then
-      begin
-        stLine := '<tr><td align="left" style="font-weight: normal;"> ' +
-          UTF8Copy(stLine, 2, UTF8Length(stLine));
-        stLine := StringReplace(stLine, '|',
-          ' </td><td align="left" style="font-weight: normal;">', [rfReplaceAll]) +
-          ' </td></tr>';
-        myText.Add(stLine);
-      end
-      // Last tags of the text of the footnotes
-      else if ((UTF8Copy(stLine, 1, 2) = '[^') and
-        (UTF8Pos(']: ', stLine) > 0) and (smOutput > 0)) then
-      begin
-        stLine := stLine + '</div>';
-        myText.Add(stLine);
-      end
-      // Complete
-      else if ((UTF8Copy(stLine, 1, 3) <> '```') and
-        (UTF8Copy(stLine, 1, 3) <> '---')) then
-      begin
-        myText.Add('<p>' + stLine + '</p>');
-      end;
-      Application.ProcessMessages;
-    end;
-    if blBulList = True then
-    begin
-      myText.Add('</ul>');
-    end;
-    if blNumList = True then
-    begin
-      myText.Add('</ol>');
-    end;
-    if blQuote = True then
-    begin
-      myText.Add('</blockquote>');
-    end;
-    if blCode = True then
-    begin
-      myText.Add('</code>');
-    end;
-    if blTable = True then
-    begin
-      myText.Add('</table>');
-    end;
-    myText[0] := ' ' + myText[0];
-    myText[myText.Count - 1] := myText[myText.Count - 1] + ' ';
-    // Save the normal use of characters
-    myText.Text := StringReplace(myText.Text, ' * ', ' ' + #1 + ' ', [rfReplaceAll]);
-    myText.Text := StringReplace(myText.Text, ' / ', ' ' + #2 + ' ', [rfReplaceAll]);
-    myText.Text := StringReplace(myText.Text, ' _ ', ' ' + #3 + ' ', [rfReplaceAll]);
-    myText.Text := StringReplace(myText.Text, ' ~ ', ' ' + #4 + ' ', [rfReplaceAll]);
-    myText.Text := StringReplace(myText.Text, ' ` ', ' ' + #5 + ' ', [rfReplaceAll]);
-    myText.Text := StringReplace(myText.Text, '</', #6, [rfReplaceAll]);
-    // Replace markers in links
-    blCode := False;
-    blLink := False;
-    for n := 0 to myText.Count - 1 do
-    begin
-      stLine := myText[n];
-      i := 0;
-      while i < UTF8Length(stLine) do
-      begin
-        if UTF8Copy(stLine, i, 1) = '`' then
+        // Header
+        if UTF8Copy(stLine, 1, 3) = '---' then
+        begin
+          myText.Add('<hr>');
+        end
+        else
+        // Quote
+        if UTF8Copy(stLine, 1, 2) = '> ' then
+        begin
+          if smOutput = 2 then
+          begin;
+            myText.Add('<p class=MsoQuote>');
+          end;
+          if blQuote = False then
+          begin
+            if smOutput < 2 then
+            begin
+              myText.Add('<blockquote>');
+            end;
+            blQuote := True;
+          end;
+        end
+        else
+        begin
+          if blQuote = True then
+          begin
+            if smOutput < 2 then
+            begin
+              myText.Add('</blockquote>');
+            end;
+            blQuote := False;
+          end;
+        end;
+        // Code
+        if UTF8Copy(stLine, 1, 3) = '```' then
         begin
           if blCode = False then
           begin
+            myText.Add('<code>');
             blCode := True;
           end
           else
           begin
+            myText.Add('</code>');
             blCode := False;
           end;
-        end
-        else
-        if UTF8Copy(stLine, i, 6) = '<code>' then
+        end;
+        // Table
+        if UTF8Copy(stLine, 1, 1) = '|' then
         begin
-          blCode := True;
-        end
-        else
-        if UTF8Copy(stLine, i, 6) = #6 + 'code>' then
-        begin
-          blCode := False;
-        end
-        else
-        if UTF8Copy(stLine, i, 1) = '(' then
-        begin
-          if UTF8Copy(stLine, i - 1, 1) = ']' then
+          if blTable = False then
           begin
-            blLink := True;
+            myText.Add('<table align="center" style="width:100%">');
+            blTable := True;
           end;
         end
         else
-        if UTF8Copy(stLine, i, 1) = ')' then
         begin
-          blLink := False;
-        end
-        else
-        if UTF8Copy(stLine, i, 1) = '*' then
-        begin
-          if ((blCode = True) or (blLink = True)) then
+          if blTable = True then
           begin
-            stLine := UTF8Copy(stLine, 1, i - 1) + #1 +
-              UTF8Copy(stLine, i + 1, UTF8Length(stLine));
-          end
-          else
-          if UTF8Pos('*', stLine, i + 1) > 0 then
-          begin
-            stLine := UTF8Copy(stLine, 1, i - 1) + '<b>' +
-              UTF8Copy(stLine, i + 1, UTF8Length(stLine));
-            stLine := UTF8Copy(stLine, 1, UTF8Pos('*', stLine, i + 1) - 1) +
-              #6'b>' + UTF8Copy(stLine, UTF8Pos('*', stLine, i + 1) + 1,
-              UTF8Length(stLine));
-          end;
-        end
-        else
-        if UTF8Copy(stLine, i, 1) = '/' then
-        begin
-          if ((blCode = True) or (blLink = True)) then
-          begin
-            stLine := UTF8Copy(stLine, 1, i - 1) + #2 +
-              UTF8Copy(stLine, i + 1, UTF8Length(stLine));
-          end
-          else
-          if UTF8Pos('/', stLine, i + 1) > 0 then
-          begin
-            stLine := UTF8Copy(stLine, 1, i - 1) + '<i>' +
-              UTF8Copy(stLine, i + 1, UTF8Length(stLine));
-            stLine := UTF8Copy(stLine, 1, UTF8Pos('/', stLine, i + 1) - 1) +
-              #6'i>' + UTF8Copy(stLine, UTF8Pos('/', stLine, i + 1) + 1,
-              UTF8Length(stLine));
-          end;
-        end
-        else
-        if UTF8Copy(stLine, i, 1) = '_' then
-        begin
-          if ((blCode = True) or (blLink = True)) then
-          begin
-            stLine := UTF8Copy(stLine, 1, i - 1) + #3 +
-              UTF8Copy(stLine, i + 1, UTF8Length(stLine));
-          end
-          else
-          if UTF8Pos('_', stLine, i + 1) > 0 then
-          begin
-            stLine := UTF8Copy(stLine, 1, i - 1) + '<u>' +
-              UTF8Copy(stLine, i + 1, UTF8Length(stLine));
-            stLine := UTF8Copy(stLine, 1, UTF8Pos('_', stLine, i + 1) - 1) +
-              #6'u>' + UTF8Copy(stLine, UTF8Pos('_', stLine, i + 1) + 1,
-              UTF8Length(stLine));
-          end;
-        end
-        else
-        if UTF8Copy(stLine, i, 1) = '~' then
-        begin
-          if ((blCode = True) or (blLink = True)) then
-          begin
-            stLine := UTF8Copy(stLine, 1, i - 1) + #4 +
-              UTF8Copy(stLine, i + 1, UTF8Length(stLine));
-          end
-          else
-          if UTF8Pos('~', stLine, i + 1) > 0 then
-          begin
-            stLine := UTF8Copy(stLine, 1, i - 1) + '<strike>' +
-              UTF8Copy(stLine, i + 1, UTF8Length(stLine));
-            stLine := UTF8Copy(stLine, 1, UTF8Pos('~', stLine, i + 1) - 1) +
-              #6'strike>' + UTF8Copy(stLine, UTF8Pos('~', stLine, i + 1) + 1,
-              UTF8Length(stLine));
+            myText.Add('</table>');
+            blTable := False;
           end;
         end;
-        Inc(i);
-      end;
-      while UTF8Pos('::', stLine, 1) > 0 do
-      begin
-        if UTF8Pos('::', stLine,
-          UTF8Pos('::', stLine, 1) + 2) > 0 then
+        // Headings
+        if UTF8Copy(stLine, 1, 7) = '###### ' then
         begin
-          stLine := StringReplace(stLine, '::',
-            '<span style="background-color:' + ColorToHtml(clHighColor) + ';">', []);
-          stLine := StringReplace(stLine, '::', '</span>', []);
+          stLine := UTF8Copy(stLine, 8, UTF8Length(stLine));
+          myText.Add('<h6>' + stLine + '</h6>');
+        end
+        else if UTF8Copy(stLine, 1, 6) = '##### ' then
+        begin
+          stLine := UTF8Copy(stLine, 7, UTF8Length(stLine));
+          myText.Add('<h5>' + stLine + '</h5>');
+        end
+        else if UTF8Copy(stLine, 1, 5) = '#### ' then
+        begin
+          stLine := UTF8Copy(stLine, 6, UTF8Length(stLine));
+          myText.Add('<h4>' + stLine + '</h4>');
+        end
+        else if UTF8Copy(stLine, 1, 4) = '### ' then
+        begin
+          stLine := UTF8Copy(stLine, 5, UTF8Length(stLine));
+          myText.Add('<h3>' + stLine + '</h3>');
+        end
+        else if UTF8Copy(stLine, 1, 3) = '## ' then
+        begin
+          stLine := UTF8Copy(stLine, 4, UTF8Length(stLine));
+          myText.Add('<h2>' + stLine + '</h2>');
+        end
+        else if UTF8Copy(stLine, 1, 2) = '# ' then
+        begin
+          stLine := UTF8Copy(stLine, 3, UTF8Length(stLine));
+          myText.Add('<h1>' + stLine + '</h1>');
+        end
+        // Lists quotes and code
+        else if ((UTF8Copy(stLine, 1, 2) = '* ') or (UTF8Copy(stLine, 1, 2) = '- ') or
+          (UTF8Copy(stLine, 1, 2) = '+ ')) then
+        begin
+          stLine := UTF8Copy(stLine, 3, UTF8Length(stLine));
+          myText.Add('<li>' + stLine + '</li>');
+        end
+        else if ((UTF8Length(stLine) > 0) and
+          (TryStrToInt(UTF8Copy(stLine, 1, UTF8Pos('.', stLine) - 1), iTemp))) then
+        begin
+          stLine := UTF8Copy(stLine, UTF8Pos('.', stLine) + 2, UTF8Length(stLine));
+          myText.Add('<li>' + stLine + '</li>');
+        end
+        else if UTF8Copy(stLine, 1, 2) = '> ' then
+        begin
+          stLine := UTF8Copy(stLine, 3, UTF8Length(stLine));
+          myText.Add(stLine + '<p>');
+        end
+        // Tables
+        else if ((UTF8Copy(stLine, 1, 4) = '|---') or
+          (UTF8Copy(stLine, 1, 5) = '| ---')) then
+        begin
+          stLine := '<tr><td align="left" style="font-weight: normal;">&nbsp;</td>';
+          myText.Add(stLine);
+        end
+        else if UTF8Copy(stLine, 1, 1) = '|' then
+        begin
+          stLine := '<tr><td align="left" style="font-weight: normal;"> ' +
+            UTF8Copy(stLine, 2, UTF8Length(stLine));
+          stLine := StringReplace(stLine, '|',
+            ' </td><td align="left" style="font-weight: normal;">', [rfReplaceAll]) +
+            ' </td></tr>';
+          myText.Add(stLine);
+        end
+        // Last tags of the text of the footnotes
+        else if ((UTF8Copy(stLine, 1, 2) = '[^') and
+          (UTF8Pos(']: ', stLine) > 0) and (smOutput > 0)) then
+        begin
+          stLine := stLine + '</div>';
+          myText.Add(stLine);
+        end
+        // Complete
+        else if ((UTF8Copy(stLine, 1, 3) <> '```') and
+          (UTF8Copy(stLine, 1, 3) <> '---')) then
+        begin
+          myText.Add('<p>' + stLine + '</p>');
+        end;
+        Application.ProcessMessages;
+      end;
+      if blBulList = True then
+      begin
+        myText.Add('</ul>');
+      end;
+      if blNumList = True then
+      begin
+        myText.Add('</ol>');
+      end;
+      if blQuote = True then
+      begin
+        myText.Add('</blockquote>');
+      end;
+      if blCode = True then
+      begin
+        myText.Add('</code>');
+      end;
+      if blTable = True then
+      begin
+        myText.Add('</table>');
+      end;
+      myText[0] := ' ' + myText[0];
+      myText[myText.Count - 1] := myText[myText.Count - 1] + ' ';
+      // Save the normal use of characters
+      myText.Text := StringReplace(myText.Text, ' * ', ' ' + #1 + ' ', [rfReplaceAll]);
+      myText.Text := StringReplace(myText.Text, ' / ', ' ' + #2 + ' ', [rfReplaceAll]);
+      myText.Text := StringReplace(myText.Text, ' _ ', ' ' + #3 + ' ', [rfReplaceAll]);
+      myText.Text := StringReplace(myText.Text, ' ~ ', ' ' + #4 + ' ', [rfReplaceAll]);
+      myText.Text := StringReplace(myText.Text, ' ` ', ' ' + #5 + ' ', [rfReplaceAll]);
+      myText.Text := StringReplace(myText.Text, '</', #6, [rfReplaceAll]);
+      // Replace markers in links
+      blCode := False;
+      blLink := False;
+      for n := 0 to myText.Count - 1 do
+      begin
+        stLine := myText[n];
+        i := 0;
+        while i < UTF8Length(stLine) do
+        begin
+          if UTF8Copy(stLine, i, 1) = '`' then
+          begin
+            if blCode = False then
+            begin
+              blCode := True;
+            end
+            else
+            begin
+              blCode := False;
+            end;
+          end
+          else
+          if UTF8Copy(stLine, i, 6) = '<code>' then
+          begin
+            blCode := True;
+          end
+          else
+          if UTF8Copy(stLine, i, 6) = #6 + 'code>' then
+          begin
+            blCode := False;
+          end
+          else
+          if UTF8Copy(stLine, i, 1) = '(' then
+          begin
+            if UTF8Copy(stLine, i - 1, 1) = ']' then
+            begin
+              blLink := True;
+            end;
+          end
+          else
+          if UTF8Copy(stLine, i, 1) = ')' then
+          begin
+            blLink := False;
+          end
+          else
+          if UTF8Copy(stLine, i, 1) = '*' then
+          begin
+            if ((blCode = True) or (blLink = True)) then
+            begin
+              stLine := UTF8Copy(stLine, 1, i - 1) + #1 +
+                UTF8Copy(stLine, i + 1, UTF8Length(stLine));
+            end
+            else
+            if UTF8Pos('*', stLine, i + 1) > 0 then
+            begin
+              stLine := UTF8Copy(stLine, 1, i - 1) + '<b>' +
+                UTF8Copy(stLine, i + 1, UTF8Length(stLine));
+              stLine := UTF8Copy(stLine, 1, UTF8Pos('*', stLine, i + 1) - 1) +
+                #6'b>' + UTF8Copy(stLine, UTF8Pos('*', stLine, i + 1) + 1,
+                UTF8Length(stLine));
+            end;
+          end
+          else
+          if UTF8Copy(stLine, i, 1) = '/' then
+          begin
+            if ((blCode = True) or (blLink = True)) then
+            begin
+              stLine := UTF8Copy(stLine, 1, i - 1) + #2 +
+                UTF8Copy(stLine, i + 1, UTF8Length(stLine));
+            end
+            else
+            if UTF8Pos('/', stLine, i + 1) > 0 then
+            begin
+              stLine := UTF8Copy(stLine, 1, i - 1) + '<i>' +
+                UTF8Copy(stLine, i + 1, UTF8Length(stLine));
+              stLine := UTF8Copy(stLine, 1, UTF8Pos('/', stLine, i + 1) - 1) +
+                #6'i>' + UTF8Copy(stLine, UTF8Pos('/', stLine, i + 1) + 1,
+                UTF8Length(stLine));
+            end;
+          end
+          else
+          if UTF8Copy(stLine, i, 1) = '_' then
+          begin
+            if ((blCode = True) or (blLink = True)) then
+            begin
+              stLine := UTF8Copy(stLine, 1, i - 1) + #3 +
+                UTF8Copy(stLine, i + 1, UTF8Length(stLine));
+            end
+            else
+            if UTF8Pos('_', stLine, i + 1) > 0 then
+            begin
+              stLine := UTF8Copy(stLine, 1, i - 1) + '<u>' +
+                UTF8Copy(stLine, i + 1, UTF8Length(stLine));
+              stLine := UTF8Copy(stLine, 1, UTF8Pos('_', stLine, i + 1) - 1) +
+                #6'u>' + UTF8Copy(stLine, UTF8Pos('_', stLine, i + 1) + 1,
+                UTF8Length(stLine));
+            end;
+          end
+          else
+          if UTF8Copy(stLine, i, 1) = '~' then
+          begin
+            if ((blCode = True) or (blLink = True)) then
+            begin
+              stLine := UTF8Copy(stLine, 1, i - 1) + #4 +
+                UTF8Copy(stLine, i + 1, UTF8Length(stLine));
+            end
+            else
+            if UTF8Pos('~', stLine, i + 1) > 0 then
+            begin
+              stLine := UTF8Copy(stLine, 1, i - 1) + '<strike>' +
+                UTF8Copy(stLine, i + 1, UTF8Length(stLine));
+              stLine := UTF8Copy(stLine, 1, UTF8Pos('~', stLine, i + 1) - 1) +
+                #6'strike>' + UTF8Copy(stLine, UTF8Pos('~', stLine, i + 1) + 1,
+                UTF8Length(stLine));
+            end;
+          end;
+          Inc(i);
+        end;
+        while UTF8Pos('::', stLine, 1) > 0 do
+        begin
+          if UTF8Pos('::', stLine,
+            UTF8Pos('::', stLine, 1) + 2) > 0 then
+          begin
+            stLine := StringReplace(stLine, '::',
+              '<span style="background-color:' + ColorToHtml(clHighColor) + ';">', []);
+            stLine := StringReplace(stLine, '::', '</span>', []);
+          end
+          else
+          begin
+            stLine := StringReplace(stLine, '::', '', []);
+          end;
+        end;
+        myText[n] := stLine;
+        Application.ProcessMessages;
+      end;
+      while UTF8Pos('`', myText.Text, 1) > 0 do
+      begin
+        if UTF8Pos('`', myText.Text,
+          UTF8Pos('`', myText.Text, 1) + 1) > 0 then
+        begin
+          myText.Text := StringReplace(myText.Text, '`', '<code>', []);
+          myText.Text := StringReplace(myText.Text, '`', '</code>', []);
         end
         else
         begin
-          stLine := StringReplace(stLine, '::', '', []);
+          myText.Text := StringReplace(myText.Text, '`', '', []);
         end;
       end;
-      myText[n] := stLine;
-      Application.ProcessMessages;
-    end;
-    while UTF8Pos('`', myText.Text, 1) > 0 do
-    begin
-      if UTF8Pos('`', myText.Text,
-        UTF8Pos('`', myText.Text, 1) + 1) > 0 then
+      // Save the normal use of characters
+      myText.Text := StringReplace(myText.Text, #1, '*', [rfReplaceAll]);
+      myText.Text := StringReplace(myText.Text, #2, '/', [rfReplaceAll]);
+      myText.Text := StringReplace(myText.Text, #3, '_', [rfReplaceAll]);
+      myText.Text := StringReplace(myText.Text, #4, '~', [rfReplaceAll]);
+      myText.Text := StringReplace(myText.Text, #5, '`', [rfReplaceAll]);
+      myText.Text := StringReplace(myText.Text, #6, '</', [rfReplaceAll]);
+      myText.Text := StringReplace(myText.Text, #7, '/', [rfReplaceAll]);
+      // Footnotes in the text
+      while UTF8Pos('[^', myText.Text, 1) > 0 do
       begin
-        myText.Text := StringReplace(myText.Text, '`', '<code>', []);
-        myText.Text := StringReplace(myText.Text, '`', '</code>', []);
-      end
-      else
-      begin
-        myText.Text := StringReplace(myText.Text, '`', '', []);
-      end;
-    end;
-    // Save the normal use of characters
-    myText.Text := StringReplace(myText.Text, #1, '*', [rfReplaceAll]);
-    myText.Text := StringReplace(myText.Text, #2, '/', [rfReplaceAll]);
-    myText.Text := StringReplace(myText.Text, #3, '_', [rfReplaceAll]);
-    myText.Text := StringReplace(myText.Text, #4, '~', [rfReplaceAll]);
-    myText.Text := StringReplace(myText.Text, #5, '`', [rfReplaceAll]);
-    myText.Text := StringReplace(myText.Text, #6, '</', [rfReplaceAll]);
-    myText.Text := StringReplace(myText.Text, #7, '/', [rfReplaceAll]);
-    // Footnotes in the text
-    while UTF8Pos('[^', myText.Text, 1) > 0 do
-    begin
-      stFootnote := UTF8Copy(myText.Text, UTF8Pos('[^', myText.Text, 1) +
-        2, UTF8Pos(']', myText.Text, UTF8Pos('[^', myText.Text, 1)) -
-        UTF8Pos('[^', myText.Text, 1) - 2);
-      if ((UTF8Copy(myText.Text, UTF8Pos(']', myText.Text,
-        UTF8Pos('[^', myText.Text, 1)) + 1, 1) = ':') and
-        (myFootnotes.IndexOf(stFootnote) > -1)) then
-      begin
-        if smOutput = 0 then
+        stFootnote := UTF8Copy(myText.Text, UTF8Pos('[^', myText.Text, 1) +
+          2, UTF8Pos(']', myText.Text, UTF8Pos('[^', myText.Text, 1)) -
+          UTF8Pos('[^', myText.Text, 1) - 2);
+        if ((UTF8Copy(myText.Text, UTF8Pos(']', myText.Text,
+          UTF8Pos('[^', myText.Text, 1)) + 1, 1) = ':') and
+          (myFootnotes.IndexOf(stFootnote) > -1)) then
         begin
-          myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']: ',
-            // Code for HTML standard
-            '<sup id="fn' + stFootnote + '">' + stFootnote +
-            '<a href="#ref' + stFootnote + '" title="Jump back to footnote.">' +
-            '</a></sup> ', []);
+          if smOutput = 0 then
+          begin
+            myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']: ',
+              // Code for HTML standard
+              '<sup id="fn' + stFootnote + '">' + stFootnote +
+              '<a href="#ref' + stFootnote + '" title="Jump back to footnote.">' +
+              '</a></sup> ', []);
+          end
+          else
+          if smOutput = 1 then
+          begin
+            myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']: ',
+              // Code for Writer
+              '<div id="sdfootnote' + stFootnote + '"><p class="sdfootnote">' +
+              '<a class="sdfootnotesym" name="sdfootnote' + stFootnote +
+              'sym" ' + 'href="#sdfootnote' + stFootnote + 'anc">' +
+              stFootnote + '</a>', []); // the </div> tag are already set
+          end
+          else
+          if smOutput = 2 then
+          begin
+            myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']: ',
+              // Code for Word
+              '<div style=''mso-element:footnote'' id=ftn' + stFootnote + '> ' +
+              '<p class=MsoFootnoteText><a style=''mso-footnote-id:ftn' +
+              stFootnote + ''' href="#_ftnref' + stFootnote + '" name="_ftn' +
+              stFootnote + '" title=""><span class=MsoFootnoteReference> ' +
+              '<span style=''mso-special-character: footnote''></span></span></a> ',
+              []) + '</p>'; // the </div> tag are already set
+          end;
         end
         else
-        if smOutput = 1 then
         begin
-          myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']: ',
-            // Code for Writer
-            '<div id="sdfootnote' + stFootnote + '"><p class="sdfootnote">' +
-            '<a class="sdfootnotesym" name="sdfootnote' + stFootnote +
-            'sym" ' + 'href="#sdfootnote' + stFootnote + 'anc">' +
-            stFootnote + '</a>', []); // the </div> tag are already set
-        end
-        else
-        if smOutput = 2 then
-        begin
-          myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']: ',
-            // Code for Word
-            '<div style=''mso-element:footnote'' id=ftn' + stFootnote + '> ' +
-            '<p class=MsoFootnoteText><a style=''mso-footnote-id:ftn' +
-            stFootnote + ''' href="#_ftnref' + stFootnote + '" name="_ftn' +
-            stFootnote + '" title=""><span class=MsoFootnoteReference> ' +
-            '<span style=''mso-special-character: footnote''></span></span></a> ',
-            []) + '</p>'; // the </div> tag are already set
+          if smOutput = 0 then
+          begin
+            myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']',
+              // Code for HTML standard
+              '<sup><a href="#fn' + stFootnote + '" id="ref' + stFootnote +
+              '">' + stFootnote + '</a></sup>', []);
+          end
+          else
+          if smOutput = 1 then
+          begin
+            myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']',
+              // Code for Writer
+              '<a class="sdfootnoteanc" name="sdfootnote' + stFootnote +
+              'anc" href="#sdfootnote' + stFootnote + 'sym"><sup>' +
+              stFootnote + '</sup></a>', []);
+          end
+          else
+          if smOutput = 2 then
+          begin
+            myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']',
+              // Code for Word
+              '<a style=''mso-footnote-id:ftn' + stFootnote + ''' href="#_ftn' +
+              stFootnote + '" name="_ftnref' + stFootnote + '" ' +
+              'title=""><span class=MsoFootnoteReference><span ' +
+              'style=''mso-special-character:footnote''></span></span></a>', []);
+          end;
         end;
-      end
-      else
-      begin
-        if smOutput = 0 then
-        begin
-          myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']',
-            // Code for HTML standard
-            '<sup><a href="#fn' + stFootnote + '" id="ref' + stFootnote +
-            '">' + stFootnote + '</a></sup>', []);
-        end
-        else
-        if smOutput = 1 then
-        begin
-          myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']',
-            // Code for Writer
-            '<a class="sdfootnoteanc" name="sdfootnote' + stFootnote +
-            'anc" href="#sdfootnote' + stFootnote + 'sym"><sup>' +
-            stFootnote + '</sup></a>', []);
-        end
-        else
-        if smOutput = 2 then
-        begin
-          myText.Text := StringReplace(myText.Text, '[^' + stFootnote + ']',
-            // Code for Word
-            '<a style=''mso-footnote-id:ftn' + stFootnote + ''' href="#_ftn' +
-            stFootnote + '" name="_ftnref' + stFootnote + '" ' +
-            'title=""><span class=MsoFootnoteReference><span ' +
-            'style=''mso-special-character:footnote''></span></span></a>', []);
-        end;
+        myFootnotes.Add(stFootnote);
       end;
-      myFootnotes.Add(stFootnote);
-    end;
-    // Pictures
-    while UTF8Pos('![', myText.Text, 1) > 0 do
-    begin
-      stPicture := UTF8Lowercase(UTF8Copy(myText.Text,
-        UTF8Pos('(', myText.Text, UTF8Pos('![', myText.Text, 1)) +
-        1, UTF8Pos(')', myText.Text, UTF8Pos('![', myText.Text, 1)) -
-        UTF8Pos('(', myText.Text, UTF8Pos('![', myText.Text, 1)) - 1));
-      with zqAttachments do
-        try
-          DisableControls;
+      // Pictures
+      while UTF8Pos('![', myText.Text, 1) > 0 do
+      begin
+        stPicture := UTF8Lowercase(UTF8Copy(myText.Text,
+          UTF8Pos('(', myText.Text, UTF8Pos('![', myText.Text, 1)) +
+          1, UTF8Pos(')', myText.Text, UTF8Pos('![', myText.Text, 1)) -
+          UTF8Pos('(', myText.Text, UTF8Pos('![', myText.Text, 1)) - 1));
+        with zqImpExpAttachments do
+        begin
           First;
           while not EOF do
           begin
-            if UTF8LowerCase(zqAttachmentsTITLE.Value) = stPicture then
+            if UTF8LowerCase(zqImpExpAttachmentsTITLE.Value) = stPicture then
             begin
-              zqAttachmentsATTACHMENT.SaveToFile(GetTempDir + stPicture);
+              zqImpExpAttachmentsATTACHMENT.SaveToFile(GetNotexTempDir +
+                zqImpExpNotesID.AsString + stPicture);
             end;
             Next;
           end;
-        finally
-          First;
-          EnableControls;
-        end;
-      myText.Text := StringReplace(myText.Text,
-        UTF8Copy(myText.Text, UTF8Pos('![', myText.Text, 1),
-        UTF8Pos(')', myText.Text, UTF8Pos('![', myText.Text, 1)) -
-        UTF8Pos('![', myText.Text, 1) + 1), '<img src="' + stPicture + '">', []);
-    end;
-    // Links
-    iLink := 1;
-    while UTF8Pos('[', myText.Text, iLink) > 0 do
-    begin
-      iLink := UTF8Pos('[', myText.Text, iLink) + 1;
-      if UTF8Pos(']', myText.Text, iLink) > 0 then
-      begin
-        if UTF8Copy(myText.Text, UTF8Pos(']', myText.Text, iLink) +
-          1, 1) = '(' then
-        begin
-          stLink := UTF8Copy(myText.Text, UTF8Pos(']', myText.Text, iLink) +
-            2, UTF8Pos(')', myText.Text, iLink) - 1 -
-            UTF8Pos(']', myText.Text, iLink) - 1);
-          stTextLink := UTF8Copy(myText.Text, UTF8Pos('[',
-            myText.Text, iLink - 1) + 1, UTF8Pos(']', myText.Text, iLink) -
-            UTF8Pos('[', myText.Text, iLink - 1) - 1);
-          myText.Text := StringReplace(myText.Text, '[' +
-            stTextLink + '](' + stLink + ')', '<a href="' + stLink +
-            '">' + stTextLink + '</a>', []);
+          myText.Text := StringReplace(myText.Text,
+            UTF8Copy(myText.Text, UTF8Pos('![', myText.Text, 1),
+            UTF8Pos(')', myText.Text, UTF8Pos('![', myText.Text, 1)) -
+            UTF8Pos('![', myText.Text, 1) + 1), '<img src="' +
+            zqImpExpNotesID.AsString + stPicture + '">', []);
         end;
       end;
-    end;
-    // Clear spaces
-    myText[0] := UTF8Copy(myText[0], 2, UTF8Length(myText[0]));
-    myText[myText.Count - 1] :=
-      UTF8Copy(myText[myText.Count - 1], 1, UTF8Length(myText[myText.Count - 1]) - 1);
-    // Tasks
-    if zqTasks.RecordCount > 0 then
-      try
-        zqTasks.DisableControls;
+      // Links
+      iLink := 1;
+      while UTF8Pos('[', myText.Text, iLink) > 0 do
+      begin
+        iLink := UTF8Pos('[', myText.Text, iLink) + 1;
+        if UTF8Pos(']', myText.Text, iLink) > 0 then
+        begin
+          if UTF8Copy(myText.Text, UTF8Pos(']', myText.Text, iLink) +
+            1, 1) = '(' then
+          begin
+            stLink := UTF8Copy(myText.Text, UTF8Pos(']', myText.Text, iLink) +
+              2, UTF8Pos(')', myText.Text, iLink) - 1 -
+              UTF8Pos(']', myText.Text, iLink) - 1);
+            stTextLink := UTF8Copy(myText.Text, UTF8Pos('[',
+              myText.Text, iLink - 1) + 1, UTF8Pos(']', myText.Text, iLink) -
+              UTF8Pos('[', myText.Text, iLink - 1) - 1);
+            myText.Text := StringReplace(myText.Text, '[' +
+              stTextLink + '](' + stLink + ')', '<a href="' + stLink +
+              '">' + stTextLink + '</a>', []);
+          end;
+        end;
+      end;
+      // Clear spaces
+      myText[0] := UTF8Copy(myText[0], 2, UTF8Length(myText[0]));
+      myText[myText.Count - 1] :=
+        UTF8Copy(myText[myText.Count - 1], 1, UTF8Length(myText[myText.Count - 1]) - 1);
+      // Tasks
+      if zqImpExpTasks.RecordCount > 0 then
+      begin
         myText.Add('<hr><center><h2>' + sb003 + '</h2></center>');
         myText.Add('<table align="center" style="width:100%"><tr>' +
           '<th>' +
@@ -4455,61 +4575,67 @@ begin
           ts005 + '</th>' +
           '<th>' +
           ts006 + '</th></tr>');
-        zqTasks.First;
-        for iTask := 0 to zqTasks.RecordCount - 1 do
+        zqImpExpTasks.First;
+        for iTask := 0 to zqImpExpTasks.RecordCount - 1 do
         begin
-          if zqTasksSTART_DATE.IsNull = False then
+          if zqImpExpTasksSTART_DATE.IsNull = False then
           begin
-            stStartDate := FormatDateTime('dddddd', zqTasksSTART_DATE.Value);
+            stStartDate := FormatDateTime('dddddd', zqImpExpTasksSTART_DATE.Value);
           end
           else
           begin
             stStartDate := '';
           end;
-          if zqTasksEND_DATE.IsNull = False then
+          if zqImpExpTasksEND_DATE.IsNull = False then
           begin
-            stEndDate := FormatDateTime('dddddd', zqTasksEND_DATE.Value);
+            stEndDate := FormatDateTime('dddddd', zqImpExpTasksEND_DATE.Value);
           end
           else
           begin
             stEndDate := '';
           end;
-          if zqTasksDONE.Value = 1 then
+          if zqImpExpTasksDONE.Value = 1 then
           begin
             myText.Add('<tr>' +
               '<td align="center">•</td>' +
               '<td>' +
-              zqTasksTITLE.Value + '</td>' +
+              zqImpExpTasksTITLE.Value + '</td>' +
               '<td>' +
               stStartDate + '</td>' +
               '<td>' +
               stEndDate + '</td>' +
               '<td>' +
-              zqTasksPRIORITY.AsString + '</td>' +
+              zqImpExpTasksPRIORITY.AsString + '</td>' +
               '<td>' +
-              zqTasksRESOURCES.AsString + '</td></tr>');
+              zqImpExpTasksRESOURCES.AsString + '</td></tr>');
           end
           else
           begin
             myText.Add('<tr><th></th>' +
               '<td>' +
-              zqTasksTITLE.Value + '</td>' +
+              zqImpExpTasksTITLE.Value + '</td>' +
               '<td>' +
               stStartDate + '</td>' +
               '<td>' +
               stEndDate + '</td>' +
               '<td>' +
-              zqTasksPRIORITY.AsString + '</td>' +
+              zqImpExpTasksPRIORITY.AsString + '</td>' +
               '<td>' +
-              zqTasksRESOURCES.AsString + '</td></tr>');
+              zqImpExpTasksRESOURCES.AsString + '</td></tr>');
           end;
-          zqTasks.Next;
+          zqImpExpTasks.Next;
         end;
         myText.Add('</table>');
-        zqTasks.First;
-      finally
-        zqTasks.EnableControls;
       end;
+      if blAll = True then
+      begin
+        zqImpExpNotes.Next;
+      end
+      else
+      begin
+        Break;
+      end;
+    end;
     // Finalize
     if smOutput < 2 then
     begin
@@ -4518,7 +4644,7 @@ begin
         'charset=UTF-8"><style type="text/css"> @page { margin-left: 2cm; ' +
         'margin-right: 2cm; margin-top: 2cm; margin-bottom: 2cm;}</style></head>' +
         '<style>h1 {text-align: center; font-size: 16pt; font-weight: bold; ' +
-        'margin-top: 0cm; margin-bottom: 2cm;} ' +
+        'margin-top: 0cm; margin-bottom: 2cm;page-break-before:always} ' +
         'h2 {font-size: 14pt; font-weight: bold;} ' +
         'h3 {font-size: 14pt; font-weight: normal;font-style: italic;} ' +
         'h4 {font-size: 12pt;font-weight: normal} ' +
@@ -4548,7 +4674,11 @@ begin
   finally
     Screen.Cursor := crDefault;
     myText.Free;
+    myOrigText.Free;
     myFootnotes.Free;
+    zqImpExpNotes.Close;
+    zqImpExpAttachments.Close;
+    zqImpExpTasks.Close;
   end;
 end;
 
@@ -5551,6 +5681,11 @@ begin
     Result := FormatFloat('#,0.#',
       FileSizeUtf8(stDatabase) / 1000000000) + ' GB'
   end;
+end;
+
+function TfmMain.GetNotexTempDir: String;
+begin
+  Result := GetTempDir + 'sqlnotex' + DirectorySeparator;
 end;
 
 function TfmMain.GenID(GenName: string): integer;

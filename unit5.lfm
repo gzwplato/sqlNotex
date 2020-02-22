@@ -76,6 +76,7 @@ object fmBookmarks: TfmBookmarks
     TabOrder = 0
     TitleFont.Style = [fsBold]
     TitleStyle = tsNative
+    OnDblClick = sgBookmarksDblClick
     ColWidths = (
       64
       0
@@ -176,7 +177,6 @@ object fmBookmarks: TfmBookmarks
       Width = 75
       Anchors = [akTop, akRight]
       Caption = 'Go to'
-      ModalResult = 1
       OnClick = bnGoToClick
       TabOrder = 3
     end

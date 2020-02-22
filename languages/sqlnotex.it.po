@@ -86,7 +86,7 @@ msgstr "Un software libero per gestire note e documenti"
 
 #: tfmcopyright.lbcopyrightname.caption
 msgctxt "tfmcopyright.lbcopyrightname.caption"
-msgid "sqlNotex 1.0.7"
+msgid "sqlNotex 1.0.8"
 msgstr ""
 
 #: tfmcopyright.lbcopyrightsite.caption
@@ -305,9 +305,13 @@ msgstr "Copia come Markdown"
 msgid "Copy for Word"
 msgstr "Copia per Word"
 
-#: tfmmain.mieditopenwriter.caption
-msgid "Open in Writer"
-msgstr "Apri in Writer"
+#: tfmmain.mieditopenallwriter.caption
+msgid "Open notes of section in Writer"
+msgstr "Apri le note della sezione in Writer"
+
+#: tfmmain.mieditopencurrwriter.caption
+msgid "Open current note in Writer"
+msgstr "Apri la nota corrente in Writer"
 
 #: tfmmain.mieditpreview.caption
 msgid "Preview"
@@ -650,7 +654,7 @@ msgstr "Opzioni"
 
 #: tfmmain.mitoolsrestore.caption
 msgid "Restore database"
-msgstr "Recupera database"
+msgstr "Recupera il database"
 
 #: tfmmain.mitoolsshoweditor.caption
 msgid "Show editor only"

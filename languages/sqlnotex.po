@@ -86,7 +86,7 @@ msgstr ""
 
 #: tfmcopyright.lbcopyrightname.caption
 msgctxt "tfmcopyright.lbcopyrightname.caption"
-msgid "sqlNotex 1.0.7"
+msgid "sqlNotex 1.0.8"
 msgstr ""
 
 #: tfmcopyright.lbcopyrightsite.caption
@@ -305,8 +305,12 @@ msgstr ""
 msgid "Copy for Word"
 msgstr ""
 
-#: tfmmain.mieditopenwriter.caption
-msgid "Open in Writer"
+#: tfmmain.mieditopenallwriter.caption
+msgid "Open notes of section in Writer"
+msgstr ""
+
+#: tfmmain.mieditopencurrwriter.caption
+msgid "Open current note in Writer"
 msgstr ""
 
 #: tfmmain.mieditpreview.caption

@@ -1,7 +1,7 @@
 object fmMain: TfmMain
-  Left = 390
+  Left = 388
   Height = 754
-  Top = 201
+  Top = 200
   Width = 1405
   ActiveControl = edPassword
   AllowDropFiles = True
@@ -1885,7 +1885,7 @@ object fmMain: TfmMain
   end
   object mmMenu: TMainMenu
     left = 40
-    top = 81
+    top = 80
     object miFile: TMenuItem
       Caption = 'File'
       object miFileSave: TMenuItem
@@ -1966,10 +1966,14 @@ object fmMain: TfmMain
         ShortCut = 16464
         OnClick = miEditPreviewClick
       end
-      object miEditOpenWriter: TMenuItem
-        Caption = 'Open in Writer'
+      object miEditOpenCurrWriter: TMenuItem
+        Caption = 'Open current note in Writer'
         ShortCut = 16471
-        OnClick = miEditOpenWriterClick
+        OnClick = miEditOpenCurrWriterClick
+      end
+      object miEditOpenAllWriter: TMenuItem
+        Caption = 'Open notes of section in Writer'
+        OnClick = miEditOpenCurrWriterClick
       end
       object N31: TMenuItem
         Caption = '-'
@@ -3723,8 +3727,8 @@ object fmMain: TfmMain
     end
   end
   object ppeditor: TPopupMenu
-    left = 851
-    top = 275
+    left = 848
+    top = 304
     object pmEditorCut: TMenuItem
       Caption = 'Cut'
       OnClick = pmEditorCutClick
@@ -4175,5 +4179,200 @@ object fmMain: TfmMain
     OnStateChange = StateChange
     left = 544
     top = 432
+  end
+  object zqImpExpTasks: TZQuery
+    Connection = zcConnection
+    UpdateObject = zuImpExpTasks
+    SQL.Strings = (
+      'Select * from Tasks where ID_Notes = :ID'
+      'order by ID'
+    )
+    Params = <    
+      item
+        DataType = ftUnknown
+        Name = 'ID'
+        ParamType = ptUnknown
+      end>
+    DataSource = dsImpExpNotes
+    MasterFields = 'ID'
+    MasterSource = dsImpExpNotes
+    LinkedFields = 'ID_NOTES'
+    left = 872
+    top = 232
+    ParamData = <    
+      item
+        DataType = ftUnknown
+        Name = 'ID'
+        ParamType = ptUnknown
+      end>
+    object zqImpExpTasksID: TLongintField
+      FieldKind = fkData
+      FieldName = 'ID'
+      Index = 0
+      LookupCache = False
+      ProviderFlags = [pfInUpdate, pfInWhere]
+      ReadOnly = False
+      Required = True
+    end
+    object zqImpExpTasksID_NOTES: TLongintField
+      FieldKind = fkData
+      FieldName = 'ID_NOTES'
+      Index = 1
+      LookupCache = False
+      ProviderFlags = [pfInUpdate, pfInWhere]
+      ReadOnly = False
+      Required = True
+    end
+    object zqImpExpTasksDONE: TSmallintField
+      FieldKind = fkData
+      FieldName = 'DONE'
+      Index = 2
+      LookupCache = False
+      ProviderFlags = [pfInUpdate, pfInWhere]
+      ReadOnly = False
+      Required = False
+    end
+    object zqImpExpTasksTITLE: TStringField
+      FieldKind = fkData
+      FieldName = 'TITLE'
+      Index = 3
+      LookupCache = False
+      ProviderFlags = [pfInUpdate, pfInWhere]
+      ReadOnly = False
+      Required = False
+      Size = 1000
+    end
+    object zqImpExpTasksSTART_DATE: TDateField
+      FieldKind = fkData
+      FieldName = 'START_DATE'
+      Index = 4
+      LookupCache = False
+      ProviderFlags = [pfInUpdate, pfInWhere]
+      ReadOnly = False
+      Required = False
+    end
+    object zqImpExpTasksEND_DATE: TDateField
+      FieldKind = fkData
+      FieldName = 'END_DATE'
+      Index = 5
+      LookupCache = False
+      ProviderFlags = [pfInUpdate, pfInWhere]
+      ReadOnly = False
+      Required = False
+    end
+    object zqImpExpTasksPRIORITY: TStringField
+      FieldKind = fkData
+      FieldName = 'PRIORITY'
+      Index = 6
+      LookupCache = False
+      ProviderFlags = [pfInUpdate, pfInWhere]
+      ReadOnly = False
+      Required = False
+      Size = 80
+    end
+    object zqImpExpTasksRESOURCES: TStringField
+      FieldKind = fkData
+      FieldName = 'RESOURCES'
+      Index = 7
+      LookupCache = False
+      ProviderFlags = [pfInUpdate, pfInWhere]
+      ReadOnly = False
+      Required = False
+      Size = 1000
+    end
+    object zqImpExpTasksCOMMENTS: TMemoField
+      FieldKind = fkData
+      FieldName = 'COMMENTS'
+      Index = 8
+      LookupCache = False
+      ProviderFlags = [pfInUpdate, pfInWhere]
+      ReadOnly = False
+      Required = False
+      BlobType = ftMemo
+      Transliterate = False
+    end
+  end
+  object zuImpExpTasks: TZUpdateSQL
+    DeleteSQL.Strings = (
+      'DELETE FROM Tasks'
+      'WHERE'
+      '  Tasks.ID = :OLD_ID'
+    )
+    InsertSQL.Strings = (
+      'INSERT INTO Tasks'
+      '  (ID, ID_NOTES, DONE, TITLE, START_DATE, END_DATE, PRIORITY, RESOURCES, '
+      '   COMMENTS)'
+      'VALUES'
+      '  (:ID, :ID_NOTES, :DONE, :TITLE, :START_DATE, :END_DATE, :PRIORITY, :RESOURCES, '
+      '   :COMMENTS)'
+    )
+    ModifySQL.Strings = (
+      'UPDATE Tasks SET'
+      '  ID = :ID,'
+      '  ID_NOTES = :ID_NOTES,'
+      '  DONE = :DONE,'
+      '  TITLE = :TITLE,'
+      '  START_DATE = :START_DATE,'
+      '  END_DATE = :END_DATE,'
+      '  PRIORITY = :PRIORITY,'
+      '  RESOURCES = :RESOURCES,'
+      '  COMMENTS = :COMMENTS'
+      'WHERE'
+      '  Tasks.ID = :OLD_ID'
+    )
+    UseSequenceFieldForRefreshSQL = False
+    left = 927
+    top = 232
+    ParamData = <    
+      item
+        DataType = ftUnknown
+        Name = 'ID'
+        ParamType = ptUnknown
+      end    
+      item
+        DataType = ftUnknown
+        Name = 'ID_NOTES'
+        ParamType = ptUnknown
+      end    
+      item
+        DataType = ftUnknown
+        Name = 'DONE'
+        ParamType = ptUnknown
+      end    
+      item
+        DataType = ftUnknown
+        Name = 'TITLE'
+        ParamType = ptUnknown
+      end    
+      item
+        DataType = ftUnknown
+        Name = 'START_DATE'
+        ParamType = ptUnknown
+      end    
+      item
+        DataType = ftUnknown
+        Name = 'END_DATE'
+        ParamType = ptUnknown
+      end    
+      item
+        DataType = ftUnknown
+        Name = 'PRIORITY'
+        ParamType = ptUnknown
+      end    
+      item
+        DataType = ftUnknown
+        Name = 'RESOURCES'
+        ParamType = ptUnknown
+      end    
+      item
+        DataType = ftUnknown
+        Name = 'COMMENTS'
+        ParamType = ptUnknown
+      end    
+      item
+        DataType = ftUnknown
+        Name = 'OLD_ID'
+        ParamType = ptUnknown
+      end>
   end
 end

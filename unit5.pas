@@ -49,6 +49,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure sgBookmarksDblClick(Sender: TObject);
   private
 
   public
@@ -93,6 +94,11 @@ begin
   end;
 end;
 
+procedure TfmBookmarks.sgBookmarksDblClick(Sender: TObject);
+begin
+  bnGoToClick(nil);
+end;
+
 procedure TfmBookmarks.bnSetClick(Sender: TObject);
 begin
   with sgBookmarks do
@@ -127,10 +133,6 @@ begin
   if sgBookmarks.Cells[1, sgBookmarks.Row] <> '' then
   begin;
     ModalResult := mrOK;
-  end
-  else
-  begin
-    ModalResult := mrCancel;
   end;
 end;
 
