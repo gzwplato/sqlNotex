@@ -1330,8 +1330,7 @@ begin
     (UTF8Pos(stLastChar, '1234567890*/_~#|`()[]!^.>+- ' +
       #13 + #9 + LineEnding) > 0) or
     (key = 8) or (key = 46) or
-    (UTF8Pos(stNextChar, '*/~') > 0) or
-    (dbText.SelStart = UTF8Length(dbText.Text))) then
+    (UTF8Pos(stNextChar, '*/~') > 0)) then
   begin
     FormatMarkers(False);
   end;
