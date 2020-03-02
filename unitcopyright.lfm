@@ -997,8 +997,8 @@ object fmCopyright: TfmCopyright
     Left = 160
     Height = 44
     Top = 13
-    Width = 236
-    Caption = 'sqlNotex 1.0.9'
+    Width = 254
+    Caption = 'sqlNotex 1.0.10'
     Font.Color = 4958803
     Font.Height = -36
     Font.Style = [fsBold]

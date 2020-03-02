@@ -27,7 +27,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, Menus,
-  Clipbrd;
+  Clipbrd, ZDataset;
 
 type
 
@@ -38,6 +38,7 @@ type
     bnCancel: TButton;
     bnPaste: TButton;
     edID: TEdit;
+    lbTitle: TLabel;
     lbIDKind: TLabel;
     pmMenu: TPopupMenu;
     procedure bnPasteClick(Sender: TObject);
@@ -47,6 +48,7 @@ type
   private
 
   public
+    iNoteSect: SmallInt;
 
   end;
 
@@ -55,6 +57,8 @@ var
 
 implementation
 
+uses Unit1;
+
 {$R *.lfm}
 
 { TfmInsertID }
@@ -62,6 +66,15 @@ implementation
 procedure TfmInsertID.edIDKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
+  if ((key = Ord('V')) and (Shift = [ssCtrl])) then
+  begin
+    key := 0;
+    if bnPaste.Enabled = True then
+    begin
+      bnPasteClick(nil);
+    end;
+  end
+  else
   if key = 13 then
   begin
     ModalResult := mrOK;
@@ -70,6 +83,10 @@ begin
   if (((key < 48) or (key > 57)) and (key <> 8)) then
   begin
     key := 0;
+  end
+  else
+  begin
+    lbTitle.Caption := '';
   end;
 end;
 
@@ -83,9 +100,31 @@ begin
 end;
 
 procedure TfmInsertID.bnPasteClick(Sender: TObject);
+  var myDataset: TZQuery;
 begin
   edID.Clear;
+  lbTitle.Caption := '';
   edID.PasteFromClipboard;
+  try
+    myDataset := TZQuery.Create(Self);
+    myDataset.Connection := fmMain.zqNotebooks.Connection;
+    if iNoteSect = 0 then
+    begin
+      myDataset.Sql.Add('Select Notebooks.Title from Notebooks');
+      myDataset.Sql.Add('where Notebooks.ID = ' + edID.Text);
+    end
+    else
+    if iNoteSect = 1 then
+    begin
+      myDataset.Sql.Add('Select Sections.Title from Sections');
+      myDataset.Sql.Add('where Sections.ID = ' + edID.Text);
+    end;
+    myDataSet.Open;
+    lbTitle.Caption := myDataset.FieldByName('Title').Value;
+    myDataset.Close;
+  finally
+    myDataset.Free;
+  end;
 end;
 
 procedure TfmInsertID.FormShow(Sender: TObject);

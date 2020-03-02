@@ -1225,12 +1225,18 @@ begin
   end
   else
   if key in [16, 17, 18, 20, 27, 33, 34, 35, 36, 37, 38, 39,
-    40, 45, 92, 144, 234] then
+    40, 45, 144, 234] then
   begin
     blChanged := False;
   end
   else
-  if ((ssAlt in Shift) or (ssAltGr in Shift) or (ssCtrl in Shift)) then
+  if ((key = 13) and ((ssCtrl in Shift) or (ssAlt in Shift) or
+    (ssAltGr in Shift))) then
+  begin
+    blChanged := True;
+  end
+  else
+  if ((ssAlt in Shift) or (ssCtrl in Shift)) then
   begin
     blChanged := False;
   end;
@@ -1264,15 +1270,18 @@ begin
   begin
     Exit;
   end;
+  if UTF8Copy(dbText.Lines[dbText.CaretPos.Y], 1, 1) = '#' then
+  begin
+    ListAndFormatTitle(False);
+  end
+  else
   // An empty line contains the formatting of the previous CR,
   // and the user can enter characters speedly so that only from the
   // 5 or so they are is detected, so...
-  if (((UTF8Copy(dbText.Lines[dbText.CaretPos.Y - 1], 1, 1) = '#') and
-    (dbText.CaretPos.X < 5) and
-    (UTF8Length(dbText.Lines[dbText.CaretPos.Y]) > 0)) or
-    (UTF8Copy(dbText.Lines[dbText.CaretPos.Y], 1, 1) = '#')) then
+  if ((dbText.CaretPos.X < 5) and
+    ((UTF8Length(dbText.Lines[dbText.CaretPos.Y]) > 0))) then
   begin
-    ListAndFormatTitle(False);
+    FormatMarkers(False);
   end
   else
   if key = 13 then
@@ -1324,9 +1333,6 @@ begin
   end
   else
   if ((UTF8Copy(dbText.Lines[dbText.CaretPos.Y], 1, 1) = '#') or
-    // Workaround for ListAndFormatTitle called above
-    ((dbText.CaretPos.x < 5) and
-    (UTF8Copy(dbText.Lines[dbText.CaretPos.Y - 1], 1, 1) = '#')) or
     (UTF8Pos(stLastChar, '1234567890*/_~#|`()[]!^.>+- ' +
       #13 + #9 + LineEnding) > 0) or
     (key = 8) or (key = 46) or
@@ -2243,8 +2249,10 @@ begin
   if blChangeIDSectionNote = False then
   begin
     fmInsertID.edID.Clear;
+    fmInsertID.lbTitle.Caption := '';
     blChangeIDSectionNote := True;
   end;
+  fmInsertID.iNoteSect := 0;
   if fmInsertID.ShowModal = mrCancel then
     Abort;
   try
@@ -2816,8 +2824,10 @@ begin
   if blChangeIDSectionNote = True then
   begin
     fmInsertID.edID.Clear;
+    fmInsertID.lbTitle.Caption := '';
     blChangeIDSectionNote := False;
   end;
+  fmInsertID.iNoteSect := 1;
   if fmInsertID.ShowModal = mrCancel then
     Abort;
   try
@@ -3107,10 +3117,12 @@ end;
 procedure TfmMain.StateChange(Sender: TObject);
 begin
   if ((dsNotebooks.State in [dsInsert, dsEdit]) or
-    (dsSections.State in [dsInsert, dsEdit]) or (dsNotes.State in
-    [dsInsert, dsEdit]) or (dsAttachments.State in [dsInsert, dsEdit]) or
-    (dsLinks.State in [dsInsert, dsEdit]) or (dsTasks.State in
-    [dsInsert, dsEdit])) then
+    (dsSections.State in [dsInsert, dsEdit]) or
+    (dsNotes.State in [dsInsert, dsEdit]) or
+    (dsAttachments.State in [dsInsert, dsEdit]) or
+    (dsTags.State in [dsInsert, dsEdit]) or
+    (dsLinks.State in [dsInsert, dsEdit]) or
+    (dsTasks.State in [dsInsert, dsEdit])) then
   begin
     miFileSave.Enabled := True;
     miFileUndo.Enabled := True;
@@ -4931,7 +4943,8 @@ begin
     end
     else
     begin
-      dbText.SetTextAttributes(iPos, UTF8Length(stLine), myNormalFont);
+      dbText.SetTextAttributes(iPos, UTF8Length(stLine) +
+        UTF8Length(LineEnding), myNormalFont);
     end;
     iPosLine := 1;
     while UTF8Pos('::', stLine, iPosLine) > 0 do
