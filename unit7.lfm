@@ -14,6 +14,14 @@ object fmInsertID: TfmInsertID
   Position = poScreenCenter
   ShowInTaskBar = stNever
   LCLVersion = '2.0.6.0'
+  object Shape1: TShape
+    Left = 25
+    Height = 30
+    Top = 83
+    Width = 254
+    Brush.Style = bsClear
+    Pen.Color = clBtnShadow
+  end
   object bnOK: TButton
     Left = 205
     Height = 32
@@ -35,7 +43,7 @@ object fmInsertID: TfmInsertID
   object edID: TEdit
     Left = 25
     Height = 36
-    Top = 50
+    Top = 42
     Width = 255
     NumbersOnly = True
     OnKeyDown = edIDKeyDown
@@ -45,7 +53,7 @@ object fmInsertID: TfmInsertID
   object lbIDKind: TLabel
     Left = 25
     Height = 19
-    Top = 27
+    Top = 19
     Width = 143
     Caption = 'Insert the notebook ID'
     ParentColor = False
@@ -60,10 +68,10 @@ object fmInsertID: TfmInsertID
     TabOrder = 1
   end
   object lbTitle: TLabel
-    Left = 25
+    Left = 30
     Height = 19
-    Top = 96
-    Width = 255
+    Top = 88
+    Width = 244
     AutoSize = False
     ParentColor = False
   end

@@ -102,7 +102,7 @@ end;
 
 procedure TfmShowAllTasks.FormCreate(Sender: TObject);
 begin
-  grTasks.SelectedColor := TColor($76CF76);
+  grTasks.SelectedColor := myColor;
   grTasks.FocusRectVisible := False;
 end;
 

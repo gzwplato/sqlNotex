@@ -1,7 +1,7 @@
 [DEBREATE-0.7.13]
 <<CTRL>>
 Package: sqlnotex
-Version: 1.0.10.0
+Version: 1.0.11.0
 Maintainer: Massimo Nardello <ms.nardello@gmail.com>
 Section: database
 Architecture: amd64
@@ -15,13 +15,13 @@ Description: A free software to manage notes, activities and files.
 <</CTRL>>
 <<FILES>>
 1
-/home/massimo/Sorgenti/sqlNotex_1.0.10/data/sqlNotex.fdb -> sqlNotex.fdb -> /usr/share/sqlnotex-data
-/home/massimo/Sorgenti/sqlNotex_1.0.10/manual/sqlnotex-manual.pdf -> sqlnotex-manual.pdf -> /usr/share/sqlnotex
-/home/massimo/Sorgenti/sqlNotex_1.0.10/sqlnotex* -> sqlnotex -> /usr/share/sqlnotex
-/home/massimo/Sorgenti/sqlNotex_1.0.10/languages/sqlnotex.it.po -> sqlnotex.it.po -> /usr/share/sqlnotex
-/home/massimo/Sorgenti/sqlNotex_1.0.10/languages/sqlnotex.po -> sqlnotex.po -> /usr/share/sqlnotex
-/home/massimo/Sorgenti/sqlNotex_1.0.10/manual/sqlnotex-manual-it.pdf -> sqlnotex-manual-it.pdf -> /usr/share/sqlnotex
-/home/massimo/Sorgenti/sqlNotex_1.0.10/icons/icon_512.png -> icon_512.png -> /usr/share/sqlnotex
+/home/massimo/Sorgenti/sqlNotex_1.0.11/icons/icon_512.png -> icon_512.png -> /usr/share/sqlnotex
+/home/massimo/Sorgenti/sqlNotex_1.0.11/manual/sqlnotex-manual-it.pdf -> sqlnotex-manual-it.pdf -> /usr/share/sqlnotex
+/home/massimo/Sorgenti/sqlNotex_1.0.11/languages/sqlnotex.po -> sqlnotex.po -> /usr/share/sqlnotex
+/home/massimo/Sorgenti/sqlNotex_1.0.11/languages/sqlnotex.it.po -> sqlnotex.it.po -> /usr/share/sqlnotex
+/home/massimo/Sorgenti/sqlNotex_1.0.11/sqlnotex* -> sqlnotex -> /usr/share/sqlnotex
+/home/massimo/Sorgenti/sqlNotex_1.0.11/manual/sqlnotex-manual.pdf -> sqlnotex-manual.pdf -> /usr/share/sqlnotex
+/home/massimo/Sorgenti/sqlNotex_1.0.11/data/sqlNotex.fdb -> sqlNotex.fdb -> /usr/share/sqlnotex-data
 <</FILES>>
 <<SCRIPTS>>
 <<PREINST>>
@@ -740,7 +740,7 @@ Type=Application
 Terminal=false
 StartupNotify=false
 Encoding=UTF-8
-Categories=Office;Office;
+Categories=Office;
 <</MENU>>
 <<BUILD>>
 1

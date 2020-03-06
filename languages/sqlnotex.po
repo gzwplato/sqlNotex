@@ -86,7 +86,7 @@ msgstr ""
 
 #: tfmcopyright.lbcopyrightname.caption
 msgctxt "tfmcopyright.lbcopyrightname.caption"
-msgid "sqlNotex 1.0.10"
+msgid "sqlNotex 1.0.11"
 msgstr ""
 
 #: tfmcopyright.lbcopyrightsite.caption
@@ -679,6 +679,10 @@ msgstr ""
 
 #: tfmmain.pmeditorselectall.caption
 msgid "Select all"
+msgstr ""
+
+#: tfmmain.pminserttag.caption
+msgid "Insert tag in current note"
 msgstr ""
 
 #: tfmmain.pmnotebookscopyid.caption
@@ -1352,6 +1356,18 @@ msgstr ""
 
 #: unit1.msg051
 msgid "It was not possible to compact the database. Check that the passwords are correct"
+msgstr ""
+
+#: unit1.msg052
+msgid "Insert note ID"
+msgstr ""
+
+#: unit1.msg053
+msgid "The note is already linked."
+msgstr ""
+
+#: unit1.msg054
+msgid "The tag is already present."
 msgstr ""
 
 #: unit1.pdfmanual

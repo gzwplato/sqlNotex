@@ -27,7 +27,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, Menus,
-  Clipbrd, ZDataset;
+  Clipbrd, ExtCtrls, ZDataset;
 
 type
 
@@ -41,6 +41,7 @@ type
     lbTitle: TLabel;
     lbIDKind: TLabel;
     pmMenu: TPopupMenu;
+    Shape1: TShape;
     procedure bnPasteClick(Sender: TObject);
     procedure edIDKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -118,6 +119,12 @@ begin
     begin
       myDataset.Sql.Add('Select Sections.Title from Sections');
       myDataset.Sql.Add('where Sections.ID = ' + edID.Text);
+    end
+    else
+    if iNoteSect = 2 then
+    begin
+      myDataset.Sql.Add('Select Notes.Title from Notes');
+      myDataset.Sql.Add('where Notes.ID = ' + edID.Text);
     end;
     myDataSet.Open;
     lbTitle.Caption := myDataset.FieldByName('Title').Value;

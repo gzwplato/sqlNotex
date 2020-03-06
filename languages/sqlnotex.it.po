@@ -86,7 +86,7 @@ msgstr "Un software libero per gestire note e documenti"
 
 #: tfmcopyright.lbcopyrightname.caption
 msgctxt "tfmcopyright.lbcopyrightname.caption"
-msgid "sqlNotex 1.0.10"
+msgid "sqlNotex 1.0.11"
 msgstr ""
 
 #: tfmcopyright.lbcopyrightsite.caption
@@ -681,6 +681,10 @@ msgstr "Incolla"
 #: tfmmain.pmeditorselectall.caption
 msgid "Select all"
 msgstr "Seleziona tutto"
+
+#: tfmmain.pminserttag.caption
+msgid "Insert tag in current note"
+msgstr "Inserire tag nella nota corrente"
 
 #: tfmmain.pmnotebookscopyid.caption
 msgctxt "tfmmain.pmnotebookscopyid.caption"
@@ -1300,21 +1304,18 @@ msgid "Insert notebook ID"
 msgstr "Inserire l'ID del quaderno"
 
 #: unit1.msg036
-#| msgid "Insert the ID of the new notebook"
 msgid "Insert the ID of the new notebook."
 msgstr "L'inserire l'ID del nuovo quaderno."
 
 #: unit1.msg037
-#| msgid "Insert the ID of the note to be linked"
 msgid "Insert the ID of the note to be linked."
 msgstr "Inserire l'ID della nota da collegare."
 
 #: unit1.msg038
 msgid "Insert section ID"
-msgstr "Inserire l'ID della sezone"
+msgstr "Inserire l'ID della sezione"
 
 #: unit1.msg039
-#| msgid "Insert the ID of the new section"
 msgid "Insert the ID of the new section."
 msgstr "Inserire l'ID della nuova sezione."
 
@@ -1327,7 +1328,6 @@ msgid "Notes found:"
 msgstr "Note trovate:"
 
 #: unit1.msg042
-#| msgid "It's not possible to import the file."
 msgid "It's not possible to import the file"
 msgstr "Non è possibile importare il file"
 
@@ -1366,6 +1366,18 @@ msgstr "Il database è stato compattato."
 #: unit1.msg051
 msgid "It was not possible to compact the database. Check that the passwords are correct"
 msgstr "Non è stato possibile compattare il database. Controllare che le password siano corrette."
+
+#: unit1.msg052
+msgid "Insert note ID"
+msgstr "Inserire l'ID della nota"
+
+#: unit1.msg053
+msgid "The note is already linked."
+msgstr "La nota è già collegata."
+
+#: unit1.msg054
+msgid "The tag is already present."
+msgstr "Il tag è già presente."
 
 #: unit1.pdfmanual
 msgid "sqlnotex-manual.pdf"

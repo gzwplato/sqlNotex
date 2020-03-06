@@ -68,9 +68,7 @@ uses Unit1;
 { TfmBookmarks }
 
 procedure TfmBookmarks.FormCreate(Sender: TObject);
-  var myColor: TColor;
 begin
-  myColor := TColor($76CF76);
   sgBookmarks.SelectedColor := myColor;
   sgBookmarks.FocusRectVisible := False;
   if FileExistsUTF8(myHomeDir + 'bookmarks') then

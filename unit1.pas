@@ -86,6 +86,7 @@ type
     lbInfo: TLabel;
     lbTitle: TLabel;
     lbID: TLabel;
+    pmInsertTag: TMenuItem;
     miEditOpenAllWriter: TMenuItem;
     miToolsCompact: TMenuItem;
     miEditCopyWord: TMenuItem;
@@ -255,7 +256,8 @@ type
     pmAttachments: TPopupMenu;
     pmTags: TPopupMenu;
     pmLinks: TPopupMenu;
-    ppeditor: TPopupMenu;
+    ppTags: TPopupMenu;
+    ppEditor: TPopupMenu;
     sdSaveDialog: TSaveDialog;
     shLogin: TShape;
     shSave: TShape;
@@ -329,8 +331,6 @@ type
     zqImpExpNotes: TZQuery;
     zqNotesMODIFICATION_DATE: TDateTimeField;
     zqImpExpTags: TZQuery;
-    zqTagsListID: TLongintField;
-    zqTagsListID_NOTES: TLongintField;
     zqTagsList: TZQuery;
     zqTagsListTAG: TStringField;
     zqTasks: TZQuery;
@@ -387,6 +387,8 @@ type
     procedure bnFindClick(Sender: TObject);
     procedure dbTextKeyDown(Sender: TObject; var Key: word; Shift: TShiftState);
     procedure dbTextKeyUp(Sender: TObject; var Key: word; Shift: TShiftState);
+    procedure dbTextMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer
+      );
     procedure dbTextMouseUp(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure dbTitleKeyDown(Sender: TObject; var Key: word; Shift: TShiftState);
@@ -453,7 +455,10 @@ type
     procedure pmEditorCutClick(Sender: TObject);
     procedure pmEditorPasteClick(Sender: TObject);
     procedure pmEditorSelectAllClick(Sender: TObject);
+    procedure pmInsertTagClick(Sender: TObject);
     procedure sgTitlesClick(Sender: TObject);
+    procedure sgTitlesMouseMove(Sender: TObject; Shift: TShiftState; X,
+      Y: Integer);
     procedure StateChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure miFileQuitClick(Sender: TObject);
@@ -556,7 +561,7 @@ var
   blSortCustomNotebooks: boolean = True;
   blSortCustomSections: boolean = True;
   blSortCustomNotes: boolean = True;
-  blChangeIDSectionNote: boolean;
+  blChangeIDSectionNote: SmallInt = -1;
   blChangedText: boolean = False;
   blLoadNotes: boolean = True;
   iLastNotebook: integer = 0;
@@ -567,6 +572,7 @@ var
   iAfterPar: integer = 0;
   iLineSpace: integer = 1;
   iRightIndent: integer = 10;
+  myColor: TColor = TColor($76CF76);
 
 resourcestring
 
@@ -621,6 +627,9 @@ resourcestring
   msg049 = 'No backup file has been specified in the options of the software.';
   msg050 = 'The database has been compacted.';
   msg051 = 'It was not possible to compact the database. Check that the passwords are correct';
+  msg052 = 'Insert note ID';
+  msg053 = 'The note is already linked.';
+  msg054 = 'The tag is already present.';
   dateformat = 'en';
   prior1 = '1. Urgent';
   prior2 = '2. Very important';
@@ -663,7 +672,6 @@ uses Unit2, Unit3, Unit4, Unit5, Unit6, Unit7, Unit8, Unit9, Unit10,
 procedure TfmMain.FormCreate(Sender: TObject);
 var
   MyIni: TIniFile;
-  myColor: TColor;
 begin
     {$ifdef Linux}
   myHomeDir := GetEnvironmentVariable('HOME') + DirectorySeparator +
@@ -748,7 +756,6 @@ begin
     end;
   end;
   Disconnect;
-  myColor := TColor($76CF76);
   grNotebooks.SelectedColor := myColor;
   grNotebooks.FocusRectVisible := False;
   grSections.SelectedColor := myColor;
@@ -1343,6 +1350,13 @@ begin
   UpdateInfo;
 end;
 
+procedure TfmMain.dbTextMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: Integer);
+begin
+  // To fix a bug...
+  dbText.Cursor := crIBeam;
+end;
+
 procedure TfmMain.dbTextMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
@@ -1355,6 +1369,13 @@ end;
 procedure TfmMain.sgTitlesClick(Sender: TObject);
 begin
   SelectTitle;
+end;
+
+procedure TfmMain.sgTitlesMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: Integer);
+begin
+  // To fix a bug...
+  sgTitles.Cursor := crHandPoint;
 end;
 
 procedure TfmMain.grTasksDrawColumnCell(Sender: TObject; const Rect: TRect;
@@ -1387,6 +1408,10 @@ end;
 
 procedure TfmMain.grFindDblClick(Sender: TObject);
 begin
+  if zqFind.Active = False then
+  begin
+    Abort;
+  end;
   if zqFind.RecordCount > 0 then
   begin
     blLoadNotes := False;
@@ -1538,13 +1563,20 @@ end;
 procedure TfmMain.grTagsListDblClick(Sender: TObject);
 begin
   cbFields.ItemIndex := 3;
-  if edFind.Text = '' then
+  if ((edFind.Text <> zqTagsListTAG.Value) and
+    (UTF8Pos(zqTagsListTAG.Value, ', ' + edFind.Text + ', ') < 1) and
+    (UTF8Copy(edFind.Text, UTF8Length(edFind.Text) -
+    UTF8Length(zqTagsListTAG.Value), UTF8Length(edFind.Text)) <>
+    zqTagsListTAG.Value)) then
   begin
-    edFind.Text := zqTagsListTAG.Value;
-  end
-  else
-  begin
-    edFind.Text := edFind.Text + ', ' + zqTagsListTAG.Value;
+    if edFind.Text = '' then
+    begin
+      edFind.Text := zqTagsListTAG.Value;
+    end
+    else
+    begin
+      edFind.Text := edFind.Text + ', ' + zqTagsListTAG.Value;
+    end;
   end;
 end;
 
@@ -2244,17 +2276,17 @@ begin
   begin
     Exit;
   end;
+  pcPageControl.PageIndex := 0;
   fmInsertID.Caption := msg035;
   fmInsertID.lbIDKind.Caption := msg036;
-  if blChangeIDSectionNote = False then
+  if blChangeIDSectionNote <> 0 then
   begin
     fmInsertID.edID.Clear;
     fmInsertID.lbTitle.Caption := '';
-    blChangeIDSectionNote := True;
+    blChangeIDSectionNote := 0;
   end;
   fmInsertID.iNoteSect := 0;
-  if fmInsertID.ShowModal = mrCancel then
-    Abort;
+  if fmInsertID.ShowModal = mrOk then
   try
     zqSections.Edit;
     zqSectionsID_NOTEBOOKS.Value := StrToInt(fmInsertID.edID.Text);
@@ -2525,10 +2557,23 @@ begin
     MessageDlg(msg004, mtWarning, [mbOK], 0);
     Abort;
   end;
+  pcPageControl.PageIndex := 0;
+  fmInsertID.Caption := msg052;
   fmInsertID.lbIDKind.Caption := msg037;
-  if fmInsertID.ShowModal = mrCancel then
-    Abort;
+  if blChangeIDSectionNote <> 2 then
+  begin
+    fmInsertID.edID.Clear;
+    fmInsertID.lbTitle.Caption := '';
+    blChangeIDSectionNote := 2;
+  end;
+  fmInsertID.iNoteSect := 2;
+  if fmInsertID.ShowModal = mrOK then
   try
+    if zqLinks.Locate('Link_Note', fmInsertID.edID.Text, []) = True then
+    begin
+      MessageDlg(msg053, mtWarning, [mbOK], 0);
+      Exit;
+    end;
     zqLinks.Append;
     zqLinks.Edit;
     zqLinksLINK_NOTE.Value := StrToInt(fmInsertID.edID.Text);
@@ -2821,15 +2866,14 @@ begin
   pcPageControl.PageIndex := 0;
   fmInsertID.Caption := msg038;
   fmInsertID.lbIDKind.Caption := msg039;
-  if blChangeIDSectionNote = True then
+  if blChangeIDSectionNote <> 1 then
   begin
     fmInsertID.edID.Clear;
     fmInsertID.lbTitle.Caption := '';
-    blChangeIDSectionNote := False;
+    blChangeIDSectionNote := 1;
   end;
   fmInsertID.iNoteSect := 1;
-  if fmInsertID.ShowModal = mrCancel then
-    Abort;
+  if fmInsertID.ShowModal = mrOk then
   try
     zqNotes.Edit;
     zqNotesID_SECTIONS.Value := StrToInt(fmInsertID.edID.Text);
@@ -3108,6 +3152,26 @@ end;
 procedure TfmMain.pmEditorSelectAllClick(Sender: TObject);
 begin
   dbText.SelectAll;
+end;
+
+procedure TfmMain.pmInsertTagClick(Sender: TObject);
+begin
+  if ((miNotesFind.Checked = True) and (zqTagsList.RecordCount > 0) and
+    (zqNotes.RecordCount > 0)) then
+  begin
+    if zqTags.Locate('Tag', zqTagsListTAG.Value, []) = True then
+    begin
+      MessageDlg(msg054, mtWarning, [mbOK], 0);
+    end
+    else
+    begin
+      zqTags.Append;
+      zqTags.Edit;
+      zqTagsTAG.Value := zqTagsListTAG.Value;
+      zqTags.Post;
+      zqTags.ApplyUpdates;
+    end;
+  end;
 end;
 
 // *****************************************************
@@ -3398,6 +3462,7 @@ begin
 end;
 
 procedure TfmMain.zqLinksBeforeDelete(DataSet: TDataSet);
+   var myDataset: TZQuery;
 begin
   if zqLinks.RecordCount = 0 then
   begin
@@ -3407,6 +3472,23 @@ begin
   if MessageDlg(msg025, mtConfirmation, [mbOK, mbCancel], 0) = mrCancel then
   begin
     Abort;
+  end
+  else
+  try
+    myDataset := TZQuery.Create(Self);
+    myDataset.Connection := fmMain.zqNotebooks.Connection;
+    myDataset.Sql.Add('Select Links.ID from Links');
+    myDataset.Sql.Add('where Links.ID_Notes = ' + zqLinksLINK_NOTE.AsString);
+    myDataset.Sql.Add('and Links.Link_Note = ' + zqNotesID.AsString);
+    myDataSet.Open;
+    if myDataset.RecordCount > 0 then
+    begin
+      myDataset.Delete;
+      myDataset.ApplyUpdates;
+    end;
+    myDataset.Close;
+  finally
+    myDataset.Free;
   end;
 end;
 
@@ -4026,12 +4108,12 @@ begin
         Exit;
       end;
     end;
-  end;
-  lbFound.Caption := msg041 + ' ' + IntToStr(zqFind.RecordCount) + '.';
-  if grFind.Visible = True then
-  begin
-    grFind.SetFocus;
-  end;
+    lbFound.Caption := msg041 + ' ' + IntToStr(zqFind.RecordCount) + '.';
+    if grFind.Visible = True then
+    begin
+      grFind.SetFocus;
+    end;
+  end
 end;
 
 function TfmMain.CopyAsHTML(smOutput:SmallInt; blAll: Boolean): string;
